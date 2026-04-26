@@ -472,9 +472,42 @@
     /* モバイル時のみヘッダ開閉ボタンを表示 */
     /* (.sticky-top プレフィックスで、後出のbase .header-collapse-btn に勝つ specificity) */
     .sticky-top .header-collapse-btn { display: block; }
-    .sticky-top.collapsed .header,
-    .sticky-top.collapsed #editor-controls { display: none; }
+
+    /* 折りたたみ時: タイトル・カレンダー名・件数表示を隠し、操作ボタンとビュー切替だけ縮めて1行表示 */
+    .sticky-top.collapsed .header { display: none; }
+    .sticky-top.collapsed .toolbar input#cal-name { display: none; }
+    .sticky-top.collapsed .info-bar > div > div:first-child { display: none; }
     .sticky-top.collapsed { margin-bottom: 4px; }
+
+    /* ツールバーを横スクロール可で1行に維持 */
+    .sticky-top.collapsed .toolbar {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 2px;
+      margin-bottom: 4px;
+    }
+    .sticky-top.collapsed .toolbar-group {
+      flex-wrap: nowrap;
+      flex-shrink: 0;
+    }
+    .sticky-top.collapsed .toolbar button,
+    .sticky-top.collapsed .toolbar .file-label {
+      min-height: 30px;
+      padding: 4px 10px;
+      font-size: 12px;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+    /* 情報バーはビュー切替だけ残してコンパクトに */
+    .sticky-top.collapsed .info-bar { padding: 3px 6px; margin-bottom: 0; }
+    .sticky-top.collapsed .view-toggle { padding: 2px; }
+    .sticky-top.collapsed .view-toggle button {
+      min-height: 28px;
+      padding: 5px 10px;
+      font-size: 11px;
+    }
   }
 
   .event-card {
@@ -1466,8 +1499,8 @@
       return;
     }
     empty.style.display = 'none';
-    // モバイル+折りたたみ状態では editor-controls を非表示(CSSは inline style に勝てないので JS で制御)
-    controls.style.display = (isMobile() && headerCollapsed) ? 'none' : 'block';
+    // editor-controls 自体は常に表示。折りたたみ時の内部要素の見せ方は CSS が制御
+    controls.style.display = 'block';
     views.style.display = 'block';
 
     calNameInput.value = state.calName;
