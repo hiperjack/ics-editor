@@ -422,12 +422,47 @@
 
   @media (max-width: 720px) {
     .week-grid { grid-template-columns: 40px repeat(7, minmax(0, 1fr)); gap: 2px; }
+    /* 週カレンダー単日モード(モバイル) */
+    .week-grid.mobile-single { grid-template-columns: 44px minmax(0, 1fr); gap: 4px; }
     .week-day-num { font-size: 12px; }
-    .week-time-label { font-size: 9px; }
-    .week-event { padding: 2px 4px; border-left-width: 2px; gap: 0; left: 2px; right: 2px; }
-    .week-event-time { font-size: 9px; }
-    .week-event-title { font-size: 10px; -webkit-line-clamp: 2; }
+    .week-time-label { font-size: 10px; right: 4px; }
+    .week-event { padding: 4px 6px; border-left-width: 3px; gap: 1px; left: 3px; right: 3px; }
+    .week-event-time { font-size: 10px; }
+    .week-event-title { font-size: 12px; -webkit-line-clamp: 2; }
     .day-event-time { width: 88px; font-size: 11px; }
+
+    /* テーブルビューはモバイルで非表示(横スクロール量が多すぎるため) */
+    #view-table-btn { display: none; }
+
+    /* タッチ向けボタンサイズ */
+    .toolbar button,
+    .toolbar .file-label,
+    .empty-state button,
+    .empty-state .file-label {
+      min-height: 38px;
+      padding: 8px 14px;
+      font-size: 14px;
+    }
+    .view-toggle button { min-height: 32px; padding: 6px 10px; font-size: 13px; }
+
+    /* ツールバー: カレンダー名入力を全幅に */
+    .toolbar { gap: 6px; }
+    .toolbar-group { gap: 6px; }
+    .toolbar input#cal-name { width: 100% !important; max-width: none; }
+
+    /* 週コントロール: モバイルでは縦並びでも違和感のないように */
+    .week-controls { gap: 8px; }
+    .week-nav { width: 100%; justify-content: space-between; }
+    .week-tz-row { width: 100%; flex-wrap: wrap; }
+    .week-tz-row select { flex: 1; min-width: 140px; max-width: 100%; }
+
+    /* モーダル: 横余白を縮める */
+    .modal { padding: 1rem; }
+    .modal-overlay { padding: 1rem 0.5rem; }
+
+    /* 情報バーがモバイルでも溢れないように */
+    .info-bar { font-size: 11px; }
+    .view-toggle { width: 100%; justify-content: space-between; }
   }
 
   .event-card {
@@ -1038,7 +1073,14 @@
   let weekDisplayTz = 'Asia/Tokyo'; // 週カレンダーで時刻軸を表示するタイムゾーン
   let enabledTZs = null; // null = 全て表示。Setの場合、含まれるIDのみTZ選択肢に表示
   let weekTzUsedOnly = false; // 週カレンダー表示TZを「ICS内で実際に使用中のTZのみ」に絞り込む
+  let mobileViewDate = null; // モバイル時の週カレンダー: 表示中の単日(Date)
   const collapsedDays = new Set(); // 日付別ビューで折りたたまれた日のキー
+
+  // モバイル/タブレット縦持ちと判定するブレイクポイント
+  function isMobile() {
+    return typeof window !== 'undefined' && window.matchMedia &&
+      window.matchMedia('(max-width: 720px)').matches;
+  }
 
   // 「主要のみ」プリセット用 TZ ID
   const TZ_PRESET_MAJOR = new Set([
@@ -1372,6 +1414,11 @@
     // 全ビューで横幅を統一(常にワイド)
     document.querySelector('.app').classList.add('wide');
 
+    // モバイルではテーブルビューが使えないので日付別へフォールバック
+    if (isMobile() && currentView === 'table') {
+      currentView = 'day';
+    }
+
     if (state.events.length === 0 && !state.loaded) {
       empty.style.display = 'block';
       controls.style.display = 'none';
@@ -1560,6 +1607,12 @@
     const allDates = items.map(it => new Date(it.ds.year, it.ds.month - 1, it.ds.day));
     const minDate = new Date(Math.min(...allDates));
     const maxDate = new Date(Math.max(...allDates));
+
+    // モバイル: 単日縦表示モードへ分岐
+    if (isMobile()) {
+      renderMobileSingleDayWeek(container, byDate, items, tz, minDate, maxDate);
+      return;
+    }
 
     function getMonday(d) {
       const day = d.getDay();
@@ -1759,6 +1812,152 @@
     evEl.appendChild(titleEl);
     evEl.onclick = () => openEditModal(idx);
     return evEl;
+  }
+
+  // モバイル用: 週カレンダーの単日表示(時刻軸 + 1日カラム + 前後日ナビ)
+  function renderMobileSingleDayWeek(container, byDate, items, tz, minDate, maxDate) {
+    // 表示日初期化(state未設定時はイベントの最初の日 or 今日)
+    if (!(mobileViewDate instanceof Date) || isNaN(mobileViewDate.getTime())) {
+      mobileViewDate = items.length > 0 ? new Date(minDate) : new Date();
+      mobileViewDate.setHours(0, 0, 0, 0);
+    }
+
+    const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
+
+    // === 上部コントロール: 表示TZ + 日ナビ ===
+    const controlsRow = document.createElement('div');
+    controlsRow.className = 'week-controls';
+
+    // 日ナビ
+    const nav = document.createElement('div');
+    nav.className = 'week-nav';
+    const navTitle = document.createElement('div');
+    navTitle.className = 'week-nav-title';
+    const wd = WEEKDAYS[mobileViewDate.getDay()];
+    navTitle.textContent = `${mobileViewDate.getFullYear()}/${mobileViewDate.getMonth() + 1}/${mobileViewDate.getDate()} (${wd})`;
+
+    const prevBtn = document.createElement('button');
+    prevBtn.textContent = '← 前日';
+    prevBtn.onclick = () => {
+      mobileViewDate.setDate(mobileViewDate.getDate() - 1);
+      render();
+    };
+
+    const nextBtn = document.createElement('button');
+    nextBtn.textContent = '次日 →';
+    nextBtn.onclick = () => {
+      mobileViewDate.setDate(mobileViewDate.getDate() + 1);
+      render();
+    };
+
+    nav.appendChild(prevBtn);
+    nav.appendChild(navTitle);
+    nav.appendChild(nextBtn);
+
+    // 表示TZ選択 + 「使用中のみ」(デスクトップと同じ)
+    const tzWrap = document.createElement('div');
+    tzWrap.className = 'week-tz-row';
+    const tzLabelEl = document.createElement('span');
+    tzLabelEl.className = 'week-tz-label';
+    tzLabelEl.textContent = '表示TZ';
+    const tzSelect = document.createElement('select');
+    tzSelect.innerHTML = buildTZOptionsHTML(tz, { usedOnly: weekTzUsedOnly });
+    tzSelect.value = tz;
+    tzSelect.onchange = () => {
+      weekDisplayTz = tzSelect.value;
+      saveState();
+      render();
+    };
+
+    const usedToggle = document.createElement('label');
+    usedToggle.className = 'week-tz-used-toggle';
+    const usedCb = document.createElement('input');
+    usedCb.type = 'checkbox';
+    usedCb.checked = weekTzUsedOnly;
+    usedCb.onchange = () => {
+      weekTzUsedOnly = usedCb.checked;
+      saveState();
+      render();
+    };
+    const usedTxt = document.createElement('span');
+    usedTxt.textContent = '使用中のみ';
+    usedToggle.appendChild(usedCb);
+    usedToggle.appendChild(usedTxt);
+
+    tzWrap.appendChild(tzLabelEl);
+    tzWrap.appendChild(tzSelect);
+    tzWrap.appendChild(usedToggle);
+
+    controlsRow.appendChild(nav);
+    controlsRow.appendChild(tzWrap);
+    container.appendChild(controlsRow);
+
+    // === グリッド構築(時刻軸 + 1日) ===
+    const minH = 0, maxH = 24;
+    const hourHeight = 36;
+    const bodyHeight = (maxH - minH) * hourHeight;
+
+    const grid = document.createElement('div');
+    grid.className = 'week-grid mobile-single';
+
+    // 時刻軸列
+    const timeCol = document.createElement('div');
+    timeCol.className = 'week-time-col';
+    const timeSpacer = document.createElement('div');
+    timeSpacer.className = 'week-time-spacer';
+    timeCol.appendChild(timeSpacer);
+    const timeAxis = document.createElement('div');
+    timeAxis.className = 'week-time-axis';
+    timeAxis.style.height = bodyHeight + 'px';
+    for (let h = minH; h <= maxH; h++) {
+      const label = document.createElement('div');
+      label.className = 'week-time-label';
+      label.style.top = ((h - minH) * hourHeight) + 'px';
+      label.textContent = String(h).padStart(2, '0') + ':00';
+      timeAxis.appendChild(label);
+    }
+    timeCol.appendChild(timeAxis);
+    grid.appendChild(timeCol);
+
+    // 単日カラム
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const isToday = mobileViewDate.getTime() === today.getTime();
+
+    const col = document.createElement('div');
+    col.className = 'week-day-col' + (isToday ? ' today' : '');
+
+    const header = document.createElement('div');
+    header.className = 'week-day-header';
+    const wdSpan = document.createElement('span');
+    wdSpan.textContent = wd;
+    if (mobileViewDate.getDay() === 0) wdSpan.style.color = 'var(--color-text-danger)';
+    else if (mobileViewDate.getDay() === 6) wdSpan.style.color = 'var(--color-text-info)';
+    const numSpan = document.createElement('span');
+    numSpan.className = 'week-day-num';
+    numSpan.textContent = (mobileViewDate.getMonth() + 1) + '/' + mobileViewDate.getDate();
+    header.appendChild(wdSpan);
+    header.appendChild(numSpan);
+
+    const body = document.createElement('div');
+    body.className = 'week-day-body';
+    body.style.height = bodyHeight + 'px';
+    body.style.setProperty('--hour-height', hourHeight + 'px');
+
+    const dayKey = mobileViewDate.getFullYear() + '-' + String(mobileViewDate.getMonth() + 1).padStart(2, '0') + '-' + String(mobileViewDate.getDate()).padStart(2, '0');
+    const dayItems = (byDate.get(dayKey) || []).slice().sort((a, b) =>
+      (a.ds.hour * 60 + a.ds.minute) - (b.ds.hour * 60 + b.ds.minute)
+    );
+    dayItems.forEach(item => {
+      const evEl = createTimeAxisEventEl(item, minH, hourHeight, bodyHeight);
+      body.appendChild(evEl);
+    });
+
+    col.appendChild(header);
+    col.appendChild(body);
+    grid.appendChild(col);
+
+    container.appendChild(grid);
   }
 
   // テーブル(Excel風)ビュー
@@ -2251,6 +2450,15 @@
   document.getElementById('event-modal').addEventListener('click', (e) => {
     if (e.target.id === 'event-modal') closeModal();
   });
+
+  // モバイル/デスクトップのブレイクポイント切替時に再描画
+  // (PCで開いていたタブをタブレットに持ち替えたケース等)
+  if (window.matchMedia) {
+    const mq = window.matchMedia('(max-width: 720px)');
+    const onChange = () => { if (state.events.length > 0 || state.loaded) render(); };
+    if (mq.addEventListener) mq.addEventListener('change', onChange);
+    else if (mq.addListener) mq.addListener(onChange); // Safari旧版フォールバック
+  }
 
   render();
 })();
