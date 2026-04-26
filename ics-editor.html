@@ -420,7 +420,9 @@
     word-break: break-word;
   }
 
-  @media (max-width: 720px) {
+  /* スマホ縦持ち + スマホ横持ち(最大950px・landscape)も同じレイアウトに揃える。
+     タブレット(>720px portrait, >=1024px landscape)はデスクトップ表示のまま */
+  @media (max-width: 720px), (max-width: 950px) and (orientation: landscape) {
     /* モバイルでは.app余白を縮小して描画領域を最大化 */
     .app { padding: 0.75rem 0.25rem 2rem; }
     .app.wide { max-width: 100vw; }
@@ -1142,10 +1144,12 @@
   let headerCollapsed = false; // モバイル時のヘッダ折りたたみ状態
   const collapsedDays = new Set(); // 日付別ビューで折りたたまれた日のキー
 
-  // モバイル/タブレット縦持ちと判定するブレイクポイント
+  // モバイル判定: スマホ縦+スマホ横をまとめて「モバイル扱い」にする
+  // タブレット(iPad縦/横)はデスクトップ扱い
+  const MOBILE_MEDIA_QUERY = '(max-width: 720px), (max-width: 950px) and (orientation: landscape)';
   function isMobile() {
     return typeof window !== 'undefined' && window.matchMedia &&
-      window.matchMedia('(max-width: 720px)').matches;
+      window.matchMedia(MOBILE_MEDIA_QUERY).matches;
   }
 
   // 「主要のみ」プリセット用 TZ ID
@@ -2538,9 +2542,9 @@
   });
 
   // モバイル/デスクトップのブレイクポイント切替時に再描画
-  // (PCで開いていたタブをタブレットに持ち替えたケース等)
+  // (PCで開いていたタブをタブレットに持ち替え、スマホの回転、等)
   if (window.matchMedia) {
-    const mq = window.matchMedia('(max-width: 720px)');
+    const mq = window.matchMedia(MOBILE_MEDIA_QUERY);
     const onChange = () => { if (state.events.length > 0 || state.loaded) render(); };
     if (mq.addEventListener) mq.addEventListener('change', onChange);
     else if (mq.addListener) mq.addListener(onChange); // Safari旧版フォールバック
