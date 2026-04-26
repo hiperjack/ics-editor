@@ -658,6 +658,10 @@
     font-family: inherit;
     cursor: pointer;
     margin-bottom: 8px;
+    /* 長いカレンダー名でも1行に収める */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .header-collapse-btn:hover { background: var(--color-background-primary); }
   .sticky-top::after {
@@ -1219,9 +1223,11 @@
       if (localStorage.getItem('ics-editor-week-tz-used-only') === '1') {
         weekTzUsedOnly = true;
       }
-      if (localStorage.getItem('ics-editor-header-collapsed') === '1') {
-        headerCollapsed = true;
-      }
+      // ヘッダ折りたたみ: 明示保存値があれば優先、無ければモバイル時のみtrue
+      const collapsedStored = localStorage.getItem('ics-editor-header-collapsed');
+      if (collapsedStored === '1') headerCollapsed = true;
+      else if (collapsedStored === '0') headerCollapsed = false;
+      else headerCollapsed = isMobile();
     } catch (e) { /* corrupt data */ }
   }
 
@@ -1489,7 +1495,8 @@
     const stickyTop = document.querySelector('.sticky-top');
     stickyTop.classList.toggle('collapsed', headerCollapsed);
     const collapseBtn = document.getElementById('header-collapse-btn');
-    collapseBtn.textContent = headerCollapsed ? '▼ ヘッダを開く' : '▲ ヘッダを閉じる';
+    const titleForBtn = (state.calName && state.calName.trim()) ? state.calName : 'カレンダー';
+    collapseBtn.textContent = headerCollapsed ? '▼ ' + titleForBtn : '▲ ヘッダを閉じる';
     collapseBtn.setAttribute('aria-expanded', headerCollapsed ? 'false' : 'true');
 
     if (state.events.length === 0 && !state.loaded) {
