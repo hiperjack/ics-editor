@@ -55,6 +55,7 @@
   * { box-sizing: border-box; }
 
   html, body {
+    height: 100%;
     margin: 0;
     padding: 0;
     background: var(--color-background-tertiary);
@@ -64,17 +65,24 @@
     line-height: 1.7;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* ページ全体スクロールは無効化、コンテンツ域のみスクロール */
+    overflow: hidden;
   }
 
   .app {
     max-width: 760px;
     margin: 0 auto;
-    padding: 2rem 1.5rem 4rem;
+    padding: 0.5rem 1.5rem;
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
   }
 
-  h1 { font-size: 22px; font-weight: 500; margin: 0 0 4px 0; color: var(--color-text-primary); }
-  h2 { font-size: 18px; font-weight: 500; margin: 0; color: var(--color-text-primary); }
-  h3 { font-size: 16px; font-weight: 500; margin: 0; color: var(--color-text-primary); }
+  h1 { font-size: 18px; font-weight: 500; margin: 0 0 2px 0; color: var(--color-text-primary); }
+  h2 { font-size: 16px; font-weight: 500; margin: 0; color: var(--color-text-primary); }
+  h3 { font-size: 15px; font-weight: 500; margin: 0; color: var(--color-text-primary); }
   p { margin: 0; }
 
   input[type="text"],
@@ -158,7 +166,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: 6px;
     gap: 8px;
     flex-wrap: wrap;
   }
@@ -167,8 +175,8 @@
   .info-bar {
     background: var(--color-background-secondary);
     border-radius: var(--border-radius-md);
-    padding: 8px 12px;
-    margin-bottom: 12px;
+    padding: 6px 10px;
+    margin-bottom: 0;
     font-size: 12px;
     color: var(--color-text-secondary);
   }
@@ -424,8 +432,10 @@
      タブレット(>720px portrait, >=1024px landscape)はデスクトップ表示のまま */
   @media (max-width: 720px), (max-width: 950px) and (orientation: landscape) {
     /* モバイルでは.app余白を縮小して描画領域を最大化 */
-    .app { padding: 0.75rem 0.25rem 2rem; }
+    .app { padding: 0.25rem; }
     .app.wide { max-width: 100vw; }
+    h1 { font-size: 16px; }
+    .header p { font-size: 11px; line-height: 1.4; }
 
     .week-grid { grid-template-columns: 40px repeat(7, minmax(0, 1fr)); gap: 2px; }
     /* カレンダー単日モード(モバイル): 時刻軸列を読みやすい幅に */
@@ -637,18 +647,29 @@
   }
 
   .header {
-    padding-bottom: 12px;
+    padding-bottom: 4px;
+  }
+  .header p {
+    font-size: 12px;
+    line-height: 1.45;
   }
 
-  /* Sticky top: header + editor controls stay visible while scrolling */
+  /* sticky-top: フレックスコラム最上段。スクロール非対象の固定ヘッダ域。 */
   .sticky-top {
-    position: sticky;
-    top: 0;
-    z-index: 10;
+    flex: 0 0 auto;
     background: var(--color-background-tertiary);
-    padding-top: 0.25rem;
-    margin-bottom: 12px;
+    margin-bottom: 6px;
   }
+
+  /* editor-views: 唯一のスクロール域(フレックスの残り全域) */
+  #editor-views {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  #empty-state { flex: 0 0 auto; }
   /* モバイル用ヘッダ開閉ボタン(デスクトップでは非表示) */
   .header-collapse-btn {
     display: none;
@@ -668,13 +689,6 @@
     text-overflow: ellipsis;
   }
   .header-collapse-btn:hover { background: var(--color-background-primary); }
-  .sticky-top::after {
-    content: '';
-    display: block;
-    height: 8px;
-    background: linear-gradient(to bottom, var(--color-background-tertiary), transparent);
-    margin-bottom: -8px;
-  }
 
   /* Wide layout for week / table views */
   .app.wide { max-width: min(1600px, 96vw); }
@@ -1727,19 +1741,14 @@
     const controlsRow = document.createElement('div');
     controlsRow.className = 'week-controls';
 
-    // sticky-top の現在高さを取得し、その直下に sticky 配置
-    // (PC・モバイル共通: スクロールしても週ナビとTZ選択が常に見える)
-    const stickyEl = document.querySelector('.sticky-top');
-    if (stickyEl) {
-      const stickyH = stickyEl.offsetHeight;
-      controlsRow.style.position = 'sticky';
-      controlsRow.style.top = stickyH + 'px';
-      controlsRow.style.zIndex = '5';
-      controlsRow.style.background = 'var(--color-background-tertiary)';
-      controlsRow.style.paddingTop = '6px';
-      controlsRow.style.paddingBottom = '4px';
-      controlsRow.style.marginBottom = '0';
-    }
+    // editor-views(スクロール域) の上端に sticky 配置
+    controlsRow.style.position = 'sticky';
+    controlsRow.style.top = '0';
+    controlsRow.style.zIndex = '5';
+    controlsRow.style.background = 'var(--color-background-tertiary)';
+    controlsRow.style.paddingTop = '4px';
+    controlsRow.style.paddingBottom = '4px';
+    controlsRow.style.marginBottom = '0';
 
     // 週ナビ
     const nav = document.createElement('div');
@@ -1932,18 +1941,14 @@
     const controlsRow = document.createElement('div');
     controlsRow.className = 'week-controls';
 
-    // sticky-top の現在高さを取得し、その直下に sticky 配置(CSS変数経由ではなくinlineで確実に)
-    const stickyEl = document.querySelector('.sticky-top');
-    if (stickyEl) {
-      const stickyH = stickyEl.offsetHeight;
-      controlsRow.style.position = 'sticky';
-      controlsRow.style.top = stickyH + 'px';
-      controlsRow.style.zIndex = '5';
-      controlsRow.style.background = 'var(--color-background-tertiary)';
-      controlsRow.style.paddingTop = '6px';
-      controlsRow.style.paddingBottom = '4px';
-      controlsRow.style.marginBottom = '0';
-    }
+    // editor-views(スクロール域) の上端に sticky 配置
+    controlsRow.style.position = 'sticky';
+    controlsRow.style.top = '0';
+    controlsRow.style.zIndex = '5';
+    controlsRow.style.background = 'var(--color-background-tertiary)';
+    controlsRow.style.paddingTop = '4px';
+    controlsRow.style.paddingBottom = '4px';
+    controlsRow.style.marginBottom = '0';
 
     // 日ナビ
     const nav = document.createElement('div');
@@ -2119,15 +2124,9 @@
       '</tr>';
     table.appendChild(thead);
 
-    // sticky-top 直下に thead を固定 (スクロールしても列見出しが常に見える)
-    const stickyEl = document.querySelector('.sticky-top');
-    if (stickyEl) {
-      const stickyH = stickyEl.offsetHeight;
-      thead.querySelectorAll('th').forEach(th => {
-        th.style.top = stickyH + 'px';
-        th.style.zIndex = '5';
-      });
-    }
+    // editor-views(スクロール域) の上端に列見出しを固定 (CSS側で position:sticky; top:0; が定義済)
+    // 念のためz-indexだけ上げる
+    thead.querySelectorAll('th').forEach(th => { th.style.zIndex = '5'; });
 
     const tbody = document.createElement('tbody');
 
