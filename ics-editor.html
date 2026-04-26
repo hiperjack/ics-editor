@@ -1,0 +1,2259 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ICS カレンダーエディタ</title>
+<style>
+  :root {
+    --color-background-primary: #ffffff;
+    --color-background-secondary: #f7f6f3;
+    --color-background-tertiary: #efeee9;
+    --color-background-info: #e6f1fb;
+    --color-background-warning: #faeeda;
+    --color-background-success: #e1f5ee;
+    --color-background-danger: #fcebeb;
+    --color-text-primary: #1f1f1d;
+    --color-text-secondary: #6b6a64;
+    --color-text-tertiary: #888780;
+    --color-text-info: #0c447c;
+    --color-text-warning: #633806;
+    --color-text-success: #085041;
+    --color-text-danger: #791f1f;
+    --color-border-tertiary: rgba(0, 0, 0, 0.1);
+    --color-border-secondary: rgba(0, 0, 0, 0.18);
+    --color-border-primary: rgba(0, 0, 0, 0.28);
+    --color-border-info: #378add;
+    --border-radius-md: 8px;
+    --border-radius-lg: 12px;
+    --border-radius-xl: 16px;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Meiryo", sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-background-primary: #1f1f1d;
+      --color-background-secondary: #2c2c2a;
+      --color-background-tertiary: #181816;
+      --color-background-info: #042c53;
+      --color-background-warning: #412402;
+      --color-background-success: #04342c;
+      --color-background-danger: #501313;
+      --color-text-primary: #efeee9;
+      --color-text-secondary: #b4b2a9;
+      --color-text-tertiary: #888780;
+      --color-text-info: #b5d4f4;
+      --color-text-warning: #fac775;
+      --color-text-success: #9fe1cb;
+      --color-text-danger: #f7c1c1;
+      --color-border-tertiary: rgba(255, 255, 255, 0.1);
+      --color-border-secondary: rgba(255, 255, 255, 0.2);
+      --color-border-primary: rgba(255, 255, 255, 0.3);
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--color-background-tertiary);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .app {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  h1 { font-size: 22px; font-weight: 500; margin: 0 0 4px 0; color: var(--color-text-primary); }
+  h2 { font-size: 18px; font-weight: 500; margin: 0; color: var(--color-text-primary); }
+  h3 { font-size: 16px; font-weight: 500; margin: 0; color: var(--color-text-primary); }
+  p { margin: 0; }
+
+  input[type="text"],
+  input[type="number"],
+  input[type="datetime-local"],
+  select,
+  textarea {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--color-background-primary);
+    color: var(--color-text-primary);
+    border: 0.5px solid var(--color-border-secondary);
+    border-radius: var(--border-radius-md);
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+    height: 36px;
+    transition: border-color 0.1s;
+  }
+  textarea {
+    height: auto;
+    min-height: 80px;
+    resize: vertical;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--color-border-info);
+    box-shadow: 0 0 0 2px var(--color-background-info);
+  }
+
+  button {
+    padding: 8px 14px;
+    background: transparent;
+    color: var(--color-text-primary);
+    border: 0.5px solid var(--color-border-secondary);
+    border-radius: var(--border-radius-md);
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.1s;
+  }
+  button:hover { background: var(--color-background-secondary); }
+  button:active { transform: scale(0.98); }
+
+  .btn-primary {
+    background: var(--color-text-primary);
+    color: var(--color-background-primary);
+    border-color: var(--color-text-primary);
+  }
+  .btn-primary:hover { opacity: 0.85; background: var(--color-text-primary); }
+
+  .btn-danger { color: var(--color-text-danger); }
+
+  .empty-state {
+    background: var(--color-background-secondary);
+    border-radius: var(--border-radius-lg);
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+
+  .empty-state-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .file-label {
+    display: inline-block;
+    padding: 8px 14px;
+    border: 0.5px solid var(--color-border-secondary);
+    border-radius: var(--border-radius-md);
+    cursor: pointer;
+    font-size: 14px;
+    background: var(--color-background-primary);
+  }
+  .file-label:hover { background: var(--color-background-secondary); }
+
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .toolbar-group { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .info-bar {
+    background: var(--color-background-secondary);
+    border-radius: var(--border-radius-md);
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+  }
+
+  .event-list { display: flex; flex-direction: column; gap: 8px; }
+
+  /* View toggle */
+  .view-toggle {
+    display: inline-flex;
+    background: var(--color-background-secondary);
+    border-radius: var(--border-radius-md);
+    padding: 3px;
+    gap: 2px;
+  }
+  .view-toggle button {
+    padding: 5px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    height: auto;
+  }
+  .view-toggle button.active {
+    background: var(--color-background-primary);
+    color: var(--color-text-primary);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  }
+  .view-toggle button:hover:not(.active) { color: var(--color-text-primary); background: transparent; }
+
+  /* Day grouped view */
+  .day-group { margin-bottom: 1.25rem; }
+  .day-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 6px 0;
+    margin-bottom: 8px;
+    border-bottom: 0.5px solid var(--color-border-tertiary);
+    cursor: pointer;
+    user-select: none;
+  }
+  .day-header:hover { border-bottom-color: var(--color-border-secondary); }
+  .day-header-date {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+  }
+  .day-header-weekday {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+  }
+  .day-header-count {
+    font-size: 11px;
+    color: var(--color-text-tertiary);
+    margin-left: auto;
+  }
+  .day-header-toggle {
+    font-size: 11px;
+    color: var(--color-text-tertiary);
+    transition: transform 0.15s;
+  }
+  .day-group.collapsed .day-events { display: none; }
+  .day-group.collapsed .day-header-toggle { transform: rotate(-90deg); }
+  .day-events { display: flex; flex-direction: column; gap: 6px; padding-left: 4px; }
+  .day-event-row {
+    display: flex;
+    gap: 12px;
+    padding: 8px 12px;
+    background: var(--color-background-primary);
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-md);
+    cursor: pointer;
+    align-items: baseline;
+  }
+  .day-event-row:hover { border-color: var(--color-border-secondary); }
+  .day-event-row.cross-tz { border-color: var(--color-border-info); }
+  .day-event-time {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    flex-shrink: 0;
+    width: 110px;
+    font-variant-numeric: tabular-nums;
+  }
+  .day-event-content { flex: 1; min-width: 0; }
+  .day-event-title-line {
+    font-size: 14px;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .day-event-meta {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    margin-top: 2px;
+  }
+
+  /* Week calendar view (time-axis layout) */
+  .week-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .week-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .week-nav-title {
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .week-tz-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+  }
+  .week-tz-label { color: var(--color-text-secondary); }
+  .week-tz-row select {
+    width: auto;
+    min-width: 180px;
+    height: 32px;
+    font-size: 12px;
+  }
+  .week-tz-used-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    user-select: none;
+    padding: 0 4px;
+  }
+  .week-tz-used-toggle input[type="checkbox"] {
+    width: auto;
+    height: auto;
+    margin: 0;
+  }
+
+  .week-grid {
+    display: grid;
+    grid-template-columns: 56px repeat(7, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .week-time-col {
+    position: relative;
+    padding-right: 4px;
+  }
+  .week-time-spacer { height: 33px; }
+  .week-time-axis { position: relative; }
+  .week-time-label {
+    position: absolute;
+    right: 4px;
+    font-size: 10px;
+    color: var(--color-text-tertiary);
+    line-height: 1;
+    transform: translateY(-50%);
+    padding: 2px 4px;
+    background: var(--color-background-tertiary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .week-day-col {
+    background: var(--color-background-primary);
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-md);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .week-day-col.today { border-color: var(--color-border-info); }
+
+  .week-day-header {
+    padding: 6px 8px;
+    border-bottom: 0.5px solid var(--color-border-tertiary);
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    background: var(--color-background-primary);
+  }
+  .week-day-num {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+  }
+  .week-day-num.weekend-sun { color: var(--color-text-danger); }
+  .week-day-num.weekend-sat { color: var(--color-text-info); }
+
+  .week-day-body {
+    position: relative;
+    background-image: linear-gradient(
+      to bottom,
+      var(--color-border-tertiary) 0,
+      var(--color-border-tertiary) 1px,
+      transparent 1px,
+      transparent var(--hour-height, 40px)
+    );
+    background-size: 100% var(--hour-height, 40px);
+  }
+
+  .week-event {
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    background: var(--color-background-info);
+    color: var(--color-text-info);
+    border-left: 3px solid currentColor;
+    padding: 4px 7px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    line-height: 1.35;
+    overflow: hidden;
+    box-sizing: border-box;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  }
+  .week-event:hover { opacity: 0.92; transform: translateY(-1px); }
+  .week-event.cross-tz {
+    background: var(--color-background-warning);
+    color: var(--color-text-warning);
+  }
+  .week-event-time {
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.85;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .week-event-title {
+    font-size: 11px;
+    font-weight: 500;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    word-break: break-word;
+  }
+
+  @media (max-width: 720px) {
+    .week-grid { grid-template-columns: 40px repeat(7, minmax(0, 1fr)); gap: 2px; }
+    .week-day-num { font-size: 12px; }
+    .week-time-label { font-size: 9px; }
+    .week-event { padding: 2px 4px; border-left-width: 2px; gap: 0; left: 2px; right: 2px; }
+    .week-event-time { font-size: 9px; }
+    .week-event-title { font-size: 10px; -webkit-line-clamp: 2; }
+    .day-event-time { width: 88px; font-size: 11px; }
+  }
+
+  .event-card {
+    background: var(--color-background-primary);
+    border-radius: var(--border-radius-md);
+    border: 0.5px solid var(--color-border-tertiary);
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: border-color 0.1s;
+  }
+  .event-card:hover { border-color: var(--color-border-secondary); }
+  .event-card.cross-tz { border-color: var(--color-border-info); }
+
+  .event-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+  .event-title {
+    font-size: 14px;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .event-time {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    flex-shrink: 0;
+    text-align: right;
+  }
+  .event-meta {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+  .badge {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 2px 8px;
+    background: var(--color-background-info);
+    color: var(--color-text-info);
+    font-size: 11px;
+    border-radius: var(--border-radius-md);
+  }
+
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 2rem 1rem;
+    z-index: 100;
+    overflow-y: auto;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--color-background-primary);
+    border-radius: var(--border-radius-lg);
+    padding: 1.5rem;
+    width: 100%;
+    max-width: 560px;
+    border: 0.5px solid var(--color-border-tertiary);
+  }
+
+  .form-group { display: flex; flex-direction: column; gap: 12px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-label {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    display: block;
+    margin-bottom: 4px;
+  }
+  .form-label-tz { color: var(--color-text-tertiary); }
+
+  .checkbox-row { display: flex; align-items: center; gap: 8px; }
+  .checkbox-row input[type="checkbox"] { width: auto; margin: 0; height: auto; }
+  .checkbox-row label { font-size: 13px; cursor: pointer; }
+
+  .duration-info {
+    display: none;
+    padding: 8px 12px;
+    background: var(--color-background-info);
+    color: var(--color-text-info);
+    border-radius: var(--border-radius-md);
+    font-size: 12px;
+  }
+  .duration-info.warn {
+    background: var(--color-background-warning);
+    color: var(--color-text-warning);
+  }
+
+  .modal-footer {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+  }
+
+  .toast {
+    display: none;
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 16px;
+    background: var(--color-background-success);
+    color: var(--color-text-success);
+    border-radius: var(--border-radius-md);
+    font-size: 13px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 200;
+  }
+
+  .header {
+    padding-bottom: 12px;
+  }
+
+  /* Sticky top: header + editor controls stay visible while scrolling */
+  .sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--color-background-tertiary);
+    padding-top: 0.25rem;
+    margin-bottom: 12px;
+  }
+  .sticky-top::after {
+    content: '';
+    display: block;
+    height: 8px;
+    background: linear-gradient(to bottom, var(--color-background-tertiary), transparent);
+    margin-bottom: -8px;
+  }
+
+  /* Wide layout for week / table views */
+  .app.wide { max-width: min(1600px, 96vw); }
+  .app.wide .week-grid { grid-template-columns: 64px repeat(7, minmax(0, 1fr)); gap: 6px; }
+  .app.wide .week-time-spacer { height: 38px; }
+  .app.wide .week-time-label { font-size: 11px; right: 6px; }
+  .app.wide .week-day-num { font-size: 14px; }
+  .app.wide .week-day-header { font-size: 12px; padding: 8px 10px; }
+  .app.wide .week-event {
+    left: 5px;
+    right: 5px;
+    padding: 6px 9px;
+    border-radius: 8px;
+    border-left-width: 4px;
+    gap: 2px;
+    line-height: 1.45;
+  }
+  .app.wide .week-event-time { font-size: 11px; }
+  .app.wide .week-event-title { font-size: 13px; -webkit-line-clamp: 3; }
+
+  /* Table view */
+  .table-wrap {
+    overflow: hidden;
+    background: var(--color-background-primary);
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-md);
+  }
+  .event-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+  }
+  .event-table th,
+  .event-table td {
+    padding: 6px 8px;
+    border-bottom: 0.5px solid var(--color-border-tertiary);
+    text-align: left;
+    vertical-align: middle;
+    overflow: hidden;
+  }
+  .event-table th {
+    background: var(--color-background-secondary);
+    font-weight: 500;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    white-space: nowrap;
+  }
+  .event-table tbody tr.cross-tz td:first-child {
+    box-shadow: inset 3px 0 0 var(--color-border-info);
+  }
+  .event-table tbody tr:hover td {
+    background: var(--color-background-secondary);
+  }
+  .event-table input[type="text"],
+  .event-table input[type="datetime-local"],
+  .event-table input[type="number"],
+  .event-table select {
+    width: 100%;
+    height: 30px;
+    padding: 4px 8px;
+    font-size: 13px;
+    border: 0.5px solid transparent;
+    background: transparent;
+    border-radius: 6px;
+    min-width: 0;
+  }
+  .event-table input[type="text"]:hover,
+  .event-table input[type="datetime-local"]:hover,
+  .event-table input[type="number"]:hover,
+  .event-table select:hover {
+    border-color: var(--color-border-tertiary);
+    background: var(--color-background-primary);
+  }
+  .event-table input:focus,
+  .event-table select:focus {
+    border-color: var(--color-border-info);
+    background: var(--color-background-primary);
+    box-shadow: 0 0 0 2px var(--color-background-info);
+  }
+  .event-table .col-alarm input { text-align: right; }
+  .event-table .col-actions { text-align: center; padding: 6px 4px; }
+  .event-table .col-detail { text-align: center; padding: 6px 4px; }
+  .event-table .col-actions button,
+  .event-table .col-detail button {
+    width: 100%;
+    height: 28px;
+    padding: 0 4px;
+    font-size: 12px;
+  }
+  .event-table .row-num {
+    color: var(--color-text-tertiary);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    padding: 6px 6px;
+  }
+  .table-toolbar {
+    margin-top: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .table-hint {
+    font-size: 11px;
+    color: var(--color-text-tertiary);
+  }
+
+  /* TZ表示設定モーダル */
+  .tz-settings-list {
+    max-height: 50vh;
+    overflow-y: auto;
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-md);
+    background: var(--color-background-secondary);
+  }
+  .tz-settings-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 12px;
+    cursor: pointer;
+    border-bottom: 0.5px solid var(--color-border-tertiary);
+    user-select: none;
+  }
+  .tz-settings-row:last-child { border-bottom: none; }
+  .tz-settings-row:hover { background: var(--color-background-primary); }
+  .tz-settings-row input[type="checkbox"] {
+    width: auto;
+    height: auto;
+    margin: 0;
+    flex-shrink: 0;
+  }
+  .tz-settings-row .tz-row-label {
+    font-size: 13px;
+    color: var(--color-text-primary);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="sticky-top">
+    <div class="header">
+      <h1>ICS カレンダーエディタ</h1>
+      <p style="font-size: 13px; color: var(--color-text-secondary);">.icsファイルを読み込んで編集、新規イベント追加、再ダウンロード。フライトの開始/終了で異なるタイムゾーン対応。</p>
+    </div>
+
+    <div id="editor-controls" style="display: none;">
+      <div class="toolbar">
+        <input type="text" id="cal-name" placeholder="カレンダー名" style="width: 280px;" />
+        <div class="toolbar-group">
+          <button id="add-event-btn">+ イベント追加</button>
+          <button id="download-btn" class="btn-primary">.icsダウンロード</button>
+          <button id="open-google-btn" title=".icsをダウンロードしてGoogleカレンダーのインポート画面を開く">Googleで開く</button>
+          <button id="open-outlook-btn" title=".icsをダウンロードしてOutlookカレンダーの追加画面を開く">Outlookで開く</button>
+          <button id="tz-settings-btn" title="選択肢に表示するタイムゾーンを管理">表示TZ設定</button>
+          <button id="reset-btn">リセット</button>
+        </div>
+      </div>
+
+      <div class="info-bar">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <div>
+            <span id="event-count">0</span> 件のイベント ・ <span id="tz-info">タイムゾーン: -</span>
+          </div>
+          <div class="view-toggle" role="tablist" aria-label="表示モード">
+            <button id="view-day-btn" class="active" data-view="day">日付別</button>
+            <button id="view-week-btn" data-view="week">週カレンダー</button>
+            <button id="view-table-btn" data-view="table">テーブル</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="empty-state" class="empty-state">
+    <div style="font-size: 14px; color: var(--color-text-secondary); margin-bottom: 16px;">ICSファイルを読み込んで開始</div>
+    <div class="empty-state-actions">
+      <label for="file-input" class="file-label">ファイルを選択</label>
+      <input type="file" id="file-input" accept=".ics,text/calendar" style="display: none;" />
+      <button id="new-blank-btn">空のカレンダーから始める</button>
+    </div>
+  </div>
+
+  <div id="editor-views" style="display: none;">
+    <div id="day-grouped-list" style="display: none;"></div>
+    <div id="week-calendar-list" style="display: none;"></div>
+    <div id="table-view-list" style="display: none;"></div>
+  </div>
+
+  <div id="event-modal" class="modal-overlay">
+    <div class="modal">
+      <h3 id="modal-title">イベントを編集</h3>
+
+      <div class="form-group" style="margin-top: 1rem;">
+
+        <div>
+          <label class="form-label">タイトル</label>
+          <input type="text" id="m-summary" />
+        </div>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="m-cross-tz" />
+          <label for="m-cross-tz">出発地と到着地でタイムゾーンが異なる(国際線フライトなど)</label>
+        </div>
+
+        <div class="form-row">
+          <div>
+            <label class="form-label">開始日時 <span class="form-label-tz start-tz-label">(現地時刻)</span></label>
+            <input type="datetime-local" id="m-start" />
+          </div>
+          <div>
+            <label class="form-label">終了日時 <span class="form-label-tz end-tz-label">(現地時刻)</span></label>
+            <input type="datetime-local" id="m-end" />
+          </div>
+        </div>
+
+        <div id="single-tz-row">
+          <label class="form-label">タイムゾーン</label>
+          <select id="m-tz"></select>
+        </div>
+
+        <div id="dual-tz-row" class="form-row" style="display: none;">
+          <div>
+            <label class="form-label">出発地タイムゾーン</label>
+            <select id="m-tz-start"></select>
+          </div>
+          <div>
+            <label class="form-label">到着地タイムゾーン</label>
+            <select id="m-tz-end"></select>
+          </div>
+        </div>
+
+        <div id="duration-info" class="duration-info"></div>
+
+        <div>
+          <label class="form-label">場所</label>
+          <input type="text" id="m-location" />
+        </div>
+
+        <div>
+          <label class="form-label">説明</label>
+          <textarea id="m-description" rows="3"></textarea>
+        </div>
+
+        <div>
+          <label class="form-label">リマインダー(分前、空欄で無し)</label>
+          <input type="number" id="m-alarm" min="0" placeholder="例: 60" />
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button id="modal-delete-btn" class="btn-danger">削除</button>
+        <button id="modal-cancel-btn">キャンセル</button>
+        <button id="modal-save-btn" class="btn-primary">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="tz-settings-modal" class="modal-overlay">
+    <div class="modal" style="max-width: 720px;">
+      <h3>表示するタイムゾーン</h3>
+      <p style="font-size: 12px; color: var(--color-text-secondary); margin-top: 8px; line-height: 1.5;">
+        チェックを外したタイムゾーンは選択肢から非表示になります。<br>
+        既存イベントで使用中のTZは自動的に選択肢に残ります。
+      </p>
+
+      <div style="display: flex; gap: 8px; margin: 12px 0; flex-wrap: wrap;">
+        <button type="button" id="tz-settings-all">全て選択</button>
+        <button type="button" id="tz-settings-none">全て解除</button>
+        <button type="button" id="tz-settings-preset-major">主要のみ</button>
+        <span id="tz-settings-count" style="margin-left: auto; font-size: 12px; color: var(--color-text-secondary); align-self: center;"></span>
+      </div>
+
+      <div id="tz-settings-list" class="tz-settings-list"></div>
+
+      <div class="modal-footer">
+        <button type="button" id="tz-settings-cancel">キャンセル</button>
+        <button type="button" id="tz-settings-save" class="btn-primary">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+</div>
+
+<script>
+(function() {
+  // タイムゾーン一覧(IANA ID / 日本語名 / UTC基準オフセット時間)
+  // JSTとのオフセットは offset - 9 で算出して表示
+  const TZ_LIST = [
+    { id: 'Africa/Johannesburg', name: '南アフリカ標準時', offset: 2 },
+    { id: 'Africa/Lagos', name: '西アフリカ時間', offset: 1 },
+    { id: 'Africa/Windhoek', name: '西アフリカ時間', offset: 1 },
+    { id: 'America/Adak', name: 'ハワイ - アリューシャン標準時', offset: -10 },
+    { id: 'America/Anchorage', name: 'アラスカ標準時', offset: -9 },
+    { id: 'America/Argentina/Buenos_Aires', name: 'アルゼンチン時間', offset: -3 },
+    { id: 'America/Bogota', name: 'コロンビア時間', offset: -5 },
+    { id: 'America/Caracas', name: 'ベネズエラ時間', offset: -4.5 },
+    { id: 'America/Chicago', name: '中部標準時', offset: -6 },
+    { id: 'America/Denver', name: '山地標準時', offset: -7 },
+    { id: 'America/Godthab', name: '西グリーンランド時間', offset: -3 },
+    { id: 'America/Guatemala', name: '中部標準時', offset: -6 },
+    { id: 'America/Halifax', name: '大西洋標準時', offset: -4 },
+    { id: 'America/Los_Angeles', name: '太平洋標準時', offset: -8 },
+    { id: 'America/Montevideo', name: 'ウルグアイ時間', offset: -3 },
+    { id: 'America/New_York', name: '東部標準時', offset: -5 },
+    { id: 'America/Noronha', name: 'フェルナンド・デ・ノローニャ時間', offset: -2 },
+    { id: 'America/Phoenix', name: '山地標準時', offset: -7 },
+    { id: 'America/Santiago', name: 'チリ時間', offset: -4 },
+    { id: 'America/Santo_Domingo', name: '大西洋標準時', offset: -4 },
+    { id: 'America/St_Johns', name: 'ニューファンドランド標準時', offset: -3.5 },
+    { id: 'Asia/Baghdad', name: 'アラビア標準時', offset: 3 },
+    { id: 'Asia/Baku', name: 'アゼルバイジャン時間', offset: 4 },
+    { id: 'Asia/Beirut', name: '東ヨーロッパ時間', offset: 2 },
+    { id: 'Asia/Dhaka', name: 'バングラデシュ時間', offset: 6 },
+    { id: 'Asia/Dubai', name: '湾岸標準時', offset: 4 },
+    { id: 'Asia/Irkutsk', name: 'イルクーツク時間', offset: 9 },
+    { id: 'Asia/Jakarta', name: '西インドネシア時間', offset: 7 },
+    { id: 'Asia/Kabul', name: 'アフガニスタン時間', offset: 4.5 },
+    { id: 'Asia/Kamchatka', name: 'ペトロパブロフスクカムチャツキー時間', offset: 12 },
+    { id: 'Asia/Karachi', name: 'パキスタン時間', offset: 5 },
+    { id: 'Asia/Kathmandu', name: 'ネパール時間', offset: 5.75 },
+    { id: 'Asia/Kolkata', name: 'インド標準時', offset: 5.5 },
+    { id: 'Asia/Krasnoyarsk', name: 'クラスノヤルスク時間', offset: 8 },
+    { id: 'Asia/Omsk', name: 'オムスク時間', offset: 7 },
+    { id: 'Asia/Rangoon', name: 'ミャンマー時間', offset: 6.5 },
+    { id: 'Asia/Shanghai', name: '中国標準時', offset: 8 },
+    { id: 'Asia/Tehran', name: 'イラン標準時', offset: 3.5 },
+    { id: 'Asia/Tokyo', name: '日本標準時', offset: 9 },
+    { id: 'Asia/Vladivostok', name: 'ウラジオストク時間', offset: 11 },
+    { id: 'Asia/Yakutsk', name: 'ヤクーツク時間', offset: 10 },
+    { id: 'Asia/Yekaterinburg', name: 'エカテリンブルグ時間', offset: 6 },
+    { id: 'Atlantic/Azores', name: 'アゾレス時間', offset: -1 },
+    { id: 'Atlantic/Cape_Verde', name: 'カーボベルデ時間', offset: -1 },
+    { id: 'Australia/Adelaide', name: '中部標準時 (南オーストラリア)', offset: 9.5 },
+    { id: 'Australia/Brisbane', name: '東部標準時 (クイーンズランド)', offset: 10 },
+    { id: 'Australia/Darwin', name: '中部標準時 (ノーザンテリトリー)', offset: 9.5 },
+    { id: 'Australia/Eucla', name: '中西部標準時 (オーストラリア)', offset: 8.75 },
+    { id: 'Australia/Lord_Howe', name: 'ロードハウ島標準時', offset: 10.5 },
+    { id: 'Australia/Sydney', name: '東部標準時 (ニューサウスウェールズ)', offset: 10 },
+    { id: 'Etc/GMT+12', name: 'GMT-12:00', offset: -12 },
+    { id: 'Europe/Berlin', name: '中部ヨーロッパ時間', offset: 1 },
+    { id: 'Europe/London', name: 'グリニッジ標準時', offset: 0 },
+    { id: 'Europe/Moscow', name: 'モスクワ標準時', offset: 4 },
+    { id: 'Pacific/Apia', name: '西サモア時間', offset: 13 },
+    { id: 'Pacific/Auckland', name: 'ニュージーランド標準時', offset: 12 },
+    { id: 'Pacific/Chatham', name: 'チャタム標準時', offset: 12.75 },
+    { id: 'Pacific/Easter', name: 'イースター島時間', offset: -6 },
+    { id: 'Pacific/Gambier', name: 'ガンビア時間', offset: -9 },
+    { id: 'Pacific/Honolulu', name: 'ハワイ標準時', offset: -10 },
+    { id: 'Pacific/Kiritimati', name: 'ライン諸島時間', offset: 14 },
+    { id: 'Pacific/Majuro', name: 'マーシャル島時間', offset: 12 },
+    { id: 'Pacific/Marquesas', name: 'マルケサス時間', offset: -9.5 },
+    { id: 'Pacific/Norfolk', name: 'ノーフォーク時間', offset: 11.5 },
+    { id: 'Pacific/Noumea', name: 'ニューカレドニア時間', offset: 11 },
+    { id: 'Pacific/Pago_Pago', name: 'サモア標準時', offset: -11 },
+    { id: 'Pacific/Pitcairn', name: 'ピトケルン島標準時', offset: -8 },
+    { id: 'Pacific/Tongatapu', name: 'トンガ時間', offset: 13 },
+    { id: 'UTC', name: '協定世界時', offset: 0 }
+  ].sort((a, b) => a.offset - b.offset || a.id.localeCompare(b.id));
+
+  // UTC/JSTオフセットを符号付き文字列に整形
+  // 例: 9 → '+9', -3.5 → '-3:30', 0 → '±0', 5.75 → '+5:45'
+  function formatTzOffsetNumber(off) {
+    if (off === 0) return '±0';
+    const sign = off > 0 ? '+' : '-';
+    const abs = Math.abs(off);
+    const intPart = Math.floor(abs);
+    const fracPart = abs - intPart;
+    if (fracPart < 0.001) return sign + intPart;
+    let mins;
+    if (Math.abs(fracPart - 0.25) < 0.01) mins = ':15';
+    else if (Math.abs(fracPart - 0.5) < 0.01) mins = ':30';
+    else if (Math.abs(fracPart - 0.75) < 0.01) mins = ':45';
+    else mins = ':' + String(Math.round(fracPart * 60)).padStart(2, '0');
+    return sign + intPart + mins;
+  }
+
+  // TZ選択肢用の表示ラベル: 名称 (UTC±X / JST±Y) — IANA ID
+  function tzLabel(item) {
+    return item.name + ' (UTC' + formatTzOffsetNumber(item.offset) +
+      ' / JST' + formatTzOffsetNumber(item.offset - 9) + ') — ' + item.id;
+  }
+
+  const TZ_BLOCKS = {
+    'Asia/Tokyo': 'BEGIN:VTIMEZONE\nTZID:Asia/Tokyo\nBEGIN:STANDARD\nDTSTART:19700101T000000\nTZOFFSETFROM:+0900\nTZOFFSETTO:+0900\nTZNAME:JST\nEND:STANDARD\nEND:VTIMEZONE',
+    'America/Los_Angeles': 'BEGIN:VTIMEZONE\nTZID:America/Los_Angeles\nBEGIN:DAYLIGHT\nDTSTART:19700308T020000\nRRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU\nTZOFFSETFROM:-0800\nTZOFFSETTO:-0700\nTZNAME:PDT\nEND:DAYLIGHT\nBEGIN:STANDARD\nDTSTART:19701101T020000\nRRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU\nTZOFFSETFROM:-0700\nTZOFFSETTO:-0800\nTZNAME:PST\nEND:STANDARD\nEND:VTIMEZONE',
+    'America/Denver': 'BEGIN:VTIMEZONE\nTZID:America/Denver\nBEGIN:DAYLIGHT\nDTSTART:19700308T020000\nRRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU\nTZOFFSETFROM:-0700\nTZOFFSETTO:-0600\nTZNAME:MDT\nEND:DAYLIGHT\nBEGIN:STANDARD\nDTSTART:19701101T020000\nRRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU\nTZOFFSETFROM:-0600\nTZOFFSETTO:-0700\nTZNAME:MST\nEND:STANDARD\nEND:VTIMEZONE',
+    'America/Chicago': 'BEGIN:VTIMEZONE\nTZID:America/Chicago\nBEGIN:DAYLIGHT\nDTSTART:19700308T020000\nRRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU\nTZOFFSETFROM:-0600\nTZOFFSETTO:-0500\nTZNAME:CDT\nEND:DAYLIGHT\nBEGIN:STANDARD\nDTSTART:19701101T020000\nRRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU\nTZOFFSETFROM:-0500\nTZOFFSETTO:-0600\nTZNAME:CST\nEND:STANDARD\nEND:VTIMEZONE',
+    'America/New_York': 'BEGIN:VTIMEZONE\nTZID:America/New_York\nBEGIN:DAYLIGHT\nDTSTART:19700308T020000\nRRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU\nTZOFFSETFROM:-0500\nTZOFFSETTO:-0400\nTZNAME:EDT\nEND:DAYLIGHT\nBEGIN:STANDARD\nDTSTART:19701101T020000\nRRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU\nTZOFFSETFROM:-0400\nTZOFFSETTO:-0500\nTZNAME:EST\nEND:STANDARD\nEND:VTIMEZONE',
+    'America/Toronto': 'BEGIN:VTIMEZONE\nTZID:America/Toronto\nBEGIN:DAYLIGHT\nDTSTART:19700308T020000\nRRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU\nTZOFFSETFROM:-0500\nTZOFFSETTO:-0400\nTZNAME:EDT\nEND:DAYLIGHT\nBEGIN:STANDARD\nDTSTART:19701101T020000\nRRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU\nTZOFFSETFROM:-0400\nTZOFFSETTO:-0500\nTZNAME:EST\nEND:STANDARD\nEND:VTIMEZONE',
+    'America/Vancouver': 'BEGIN:VTIMEZONE\nTZID:America/Vancouver\nBEGIN:DAYLIGHT\nDTSTART:19700308T020000\nRRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU\nTZOFFSETFROM:-0800\nTZOFFSETTO:-0700\nTZNAME:PDT\nEND:DAYLIGHT\nBEGIN:STANDARD\nDTSTART:19701101T020000\nRRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU\nTZOFFSETFROM:-0700\nTZOFFSETTO:-0800\nTZNAME:PST\nEND:STANDARD\nEND:VTIMEZONE',
+    'Europe/London': 'BEGIN:VTIMEZONE\nTZID:Europe/London\nBEGIN:DAYLIGHT\nDTSTART:19700329T010000\nRRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU\nTZOFFSETFROM:+0000\nTZOFFSETTO:+0100\nTZNAME:BST\nEND:DAYLIGHT\nBEGIN:STANDARD\nDTSTART:19701025T020000\nRRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU\nTZOFFSETFROM:+0100\nTZOFFSETTO:+0000\nTZNAME:GMT\nEND:STANDARD\nEND:VTIMEZONE',
+    'Europe/Paris': 'BEGIN:VTIMEZONE\nTZID:Europe/Paris\nBEGIN:DAYLIGHT\nDTSTART:19700329T020000\nRRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU\nTZOFFSETFROM:+0100\nTZOFFSETTO:+0200\nTZNAME:CEST\nEND:DAYLIGHT\nBEGIN:STANDARD\nDTSTART:19701025T030000\nRRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU\nTZOFFSETFROM:+0200\nTZOFFSETTO:+0100\nTZNAME:CET\nEND:STANDARD\nEND:VTIMEZONE',
+    'Europe/Madrid': 'BEGIN:VTIMEZONE\nTZID:Europe/Madrid\nBEGIN:DAYLIGHT\nDTSTART:19700329T020000\nRRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU\nTZOFFSETFROM:+0100\nTZOFFSETTO:+0200\nTZNAME:CEST\nEND:DAYLIGHT\nBEGIN:STANDARD\nDTSTART:19701025T030000\nRRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU\nTZOFFSETFROM:+0200\nTZOFFSETTO:+0100\nTZNAME:CET\nEND:STANDARD\nEND:VTIMEZONE',
+    'Asia/Singapore': 'BEGIN:VTIMEZONE\nTZID:Asia/Singapore\nBEGIN:STANDARD\nDTSTART:19700101T000000\nTZOFFSETFROM:+0800\nTZOFFSETTO:+0800\nTZNAME:SGT\nEND:STANDARD\nEND:VTIMEZONE',
+    'Asia/Hong_Kong': 'BEGIN:VTIMEZONE\nTZID:Asia/Hong_Kong\nBEGIN:STANDARD\nDTSTART:19700101T000000\nTZOFFSETFROM:+0800\nTZOFFSETTO:+0800\nTZNAME:HKT\nEND:STANDARD\nEND:VTIMEZONE',
+    'Asia/Shanghai': 'BEGIN:VTIMEZONE\nTZID:Asia/Shanghai\nBEGIN:STANDARD\nDTSTART:19700101T000000\nTZOFFSETFROM:+0800\nTZOFFSETTO:+0800\nTZNAME:CST\nEND:STANDARD\nEND:VTIMEZONE',
+    'Asia/Seoul': 'BEGIN:VTIMEZONE\nTZID:Asia/Seoul\nBEGIN:STANDARD\nDTSTART:19700101T000000\nTZOFFSETFROM:+0900\nTZOFFSETTO:+0900\nTZNAME:KST\nEND:STANDARD\nEND:VTIMEZONE',
+    'Asia/Bangkok': 'BEGIN:VTIMEZONE\nTZID:Asia/Bangkok\nBEGIN:STANDARD\nDTSTART:19700101T000000\nTZOFFSETFROM:+0700\nTZOFFSETTO:+0700\nTZNAME:ICT\nEND:STANDARD\nEND:VTIMEZONE',
+    'Asia/Dubai': 'BEGIN:VTIMEZONE\nTZID:Asia/Dubai\nBEGIN:STANDARD\nDTSTART:19700101T000000\nTZOFFSETFROM:+0400\nTZOFFSETTO:+0400\nTZNAME:GST\nEND:STANDARD\nEND:VTIMEZONE',
+    'Australia/Sydney': 'BEGIN:VTIMEZONE\nTZID:Australia/Sydney\nBEGIN:DAYLIGHT\nDTSTART:19701004T020000\nRRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=1SU\nTZOFFSETFROM:+1000\nTZOFFSETTO:+1100\nTZNAME:AEDT\nEND:DAYLIGHT\nBEGIN:STANDARD\nDTSTART:19700405T030000\nRRULE:FREQ=YEARLY;BYMONTH=4;BYDAY=1SU\nTZOFFSETFROM:+1100\nTZOFFSETTO:+1000\nTZNAME:AEST\nEND:STANDARD\nEND:VTIMEZONE',
+    'Pacific/Auckland': 'BEGIN:VTIMEZONE\nTZID:Pacific/Auckland\nBEGIN:DAYLIGHT\nDTSTART:19700927T020000\nRRULE:FREQ=YEARLY;BYMONTH=9;BYDAY=-1SU\nTZOFFSETFROM:+1200\nTZOFFSETTO:+1300\nTZNAME:NZDT\nEND:DAYLIGHT\nBEGIN:STANDARD\nDTSTART:19700405T030000\nRRULE:FREQ=YEARLY;BYMONTH=4;BYDAY=1SU\nTZOFFSETFROM:+1300\nTZOFFSETTO:+1200\nTZNAME:NZST\nEND:STANDARD\nEND:VTIMEZONE',
+    'UTC': 'BEGIN:VTIMEZONE\nTZID:UTC\nBEGIN:STANDARD\nDTSTART:19700101T000000\nTZOFFSETFROM:+0000\nTZOFFSETTO:+0000\nTZNAME:UTC\nEND:STANDARD\nEND:VTIMEZONE'
+  };
+
+  const TZ_SHORT = {
+    'Asia/Tokyo': 'JST', 'America/Los_Angeles': 'PT', 'America/New_York': 'ET',
+    'America/Chicago': 'CT', 'America/Denver': 'MT', 'America/Toronto': 'ET',
+    'America/Vancouver': 'PT', 'Europe/London': 'GMT', 'Europe/Paris': 'CET',
+    'Europe/Madrid': 'CET', 'Asia/Singapore': 'SGT', 'Asia/Hong_Kong': 'HKT',
+    'Asia/Shanghai': 'CST', 'Asia/Seoul': 'KST', 'Asia/Bangkok': 'ICT',
+    'Asia/Dubai': 'GST', 'Australia/Sydney': 'AEST', 'Pacific/Auckland': 'NZST',
+    'UTC': 'UTC'
+  };
+
+
+  // 指定日時におけるDST考慮済みのTZ短縮名(PDT/PST等)を返す
+  // 例: getTzShortDynamic('America/Los_Angeles', utcMs5月) → 'PDT'
+  //     getTzShortDynamic('America/Los_Angeles', utcMs12月) → 'PST'
+  function getTzShortDynamic(tzid, utcMs) {
+    if (!utcMs) return TZ_SHORT[tzid] || tzid;
+    try {
+      const dtf = new Intl.DateTimeFormat('en-US', {
+        timeZone: tzid,
+        timeZoneName: 'short'
+      });
+      const parts = dtf.formatToParts(new Date(utcMs));
+      const tzName = parts.find(p => p.type === 'timeZoneName');
+      if (tzName && tzName.value) {
+        // "GMT-7" のような数値形式は、固定マップにフォールバック
+        if (/^GMT[+-]?\d/.test(tzName.value) || /^UTC[+-]?\d/.test(tzName.value)) {
+          return TZ_SHORT[tzid] || tzid;
+        }
+        return tzName.value;
+      }
+    } catch (e) {}
+    return TZ_SHORT[tzid] || tzid;
+  }
+
+  function populateTZSelect(selectEl, currentValue) {
+    selectEl.innerHTML = buildTZOptionsHTML(currentValue);
+  }
+
+  let state = { calName: 'My Calendar', events: [] };
+  let editingIndex = null;
+  let currentView = 'day'; // 'day' | 'week' | 'table'
+  let weekOffset = 0; // 表示中の週オフセット(0=最初の週、1=次の週、-1=前の週)
+  let weekDisplayTz = 'Asia/Tokyo'; // 週カレンダーで時刻軸を表示するタイムゾーン
+  let enabledTZs = null; // null = 全て表示。Setの場合、含まれるIDのみTZ選択肢に表示
+  let weekTzUsedOnly = false; // 週カレンダー表示TZを「ICS内で実際に使用中のTZのみ」に絞り込む
+  const collapsedDays = new Set(); // 日付別ビューで折りたたまれた日のキー
+
+  // 「主要のみ」プリセット用 TZ ID
+  const TZ_PRESET_MAJOR = new Set([
+    'UTC',
+    'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Kolkata', 'Asia/Dubai',
+    'Europe/London', 'Europe/Berlin', 'Europe/Moscow',
+    'America/New_York', 'America/Chicago', 'America/Los_Angeles',
+    'Australia/Sydney', 'Pacific/Auckland'
+  ]);
+
+  // 現在の enabledTZs フィルタを尊重した <option> リストを生成
+  // opts.usedOnly: state.events で実際に使用されているTZのみに絞る(週カレンダー用)
+  // currentValue が指定されかつフィルタ外の場合、自動的に先頭に付加して選択可能にする
+  function buildTZOptionsHTML(currentValue, opts) {
+    opts = opts || {};
+    let list = TZ_LIST;
+    if (enabledTZs) {
+      list = list.filter(t => enabledTZs.has(t.id));
+    }
+    if (opts.usedOnly) {
+      const used = new Set();
+      state.events.forEach(e => {
+        if (e.tzidStart) used.add(e.tzidStart);
+        if (e.tzidEnd) used.add(e.tzidEnd);
+      });
+      list = list.filter(t => used.has(t.id));
+    }
+    if (currentValue && !list.find(t => t.id === currentValue)) {
+      const cur = TZ_LIST.find(t => t.id === currentValue);
+      if (cur) list = [cur, ...list];
+    }
+    return list.map(tz => '<option value="' + tz.id + '">' + tzLabel(tz) + '</option>').join('');
+  }
+
+  // Auto-save to localStorage
+  function saveState() {
+    try {
+      localStorage.setItem('ics-editor-state', JSON.stringify(state));
+      localStorage.setItem('ics-editor-view', currentView);
+      localStorage.setItem('ics-editor-week-tz', weekDisplayTz);
+      if (enabledTZs) {
+        localStorage.setItem('ics-editor-enabled-tzs', JSON.stringify([...enabledTZs]));
+      } else {
+        localStorage.removeItem('ics-editor-enabled-tzs');
+      }
+      localStorage.setItem('ics-editor-week-tz-used-only', weekTzUsedOnly ? '1' : '0');
+    } catch (e) { /* quota exceeded etc */ }
+  }
+  function loadState() {
+    try {
+      const stored = localStorage.getItem('ics-editor-state');
+      if (stored) {
+        state = JSON.parse(stored);
+        if (state.events && state.events.length > 0) {
+          state.loaded = true;
+        }
+      }
+      const view = localStorage.getItem('ics-editor-view');
+      if (view && ['day', 'week', 'table'].includes(view)) {
+        currentView = view;
+      }
+      const wtz = localStorage.getItem('ics-editor-week-tz');
+      if (wtz && TZ_LIST.find(t => t.id === wtz)) {
+        weekDisplayTz = wtz;
+      }
+      const enTzs = localStorage.getItem('ics-editor-enabled-tzs');
+      if (enTzs) {
+        const arr = JSON.parse(enTzs);
+        if (Array.isArray(arr) && arr.length > 0) {
+          enabledTZs = new Set(arr);
+        }
+      }
+      if (localStorage.getItem('ics-editor-week-tz-used-only') === '1') {
+        weekTzUsedOnly = true;
+      }
+    } catch (e) { /* corrupt data */ }
+  }
+
+  // === Parser ===
+  function parseICS(text) {
+    text = text.replace(/\r\n /g, '').replace(/\r\n\t/g, '').replace(/\n /g, '').replace(/\n\t/g, '');
+    const lines = text.split(/\r?\n/);
+    const result = { calName: 'Imported Calendar', events: [] };
+    let currentEvent = null;
+    let currentAlarm = null;
+    let inAlarm = false;
+
+    for (let line of lines) {
+      const colonIdx = line.indexOf(':');
+      if (colonIdx === -1) continue;
+      let key = line.substring(0, colonIdx);
+      let value = line.substring(colonIdx + 1);
+      const semiIdx = key.indexOf(';');
+      let params = {};
+      if (semiIdx !== -1) {
+        const paramStr = key.substring(semiIdx + 1);
+        key = key.substring(0, semiIdx);
+        paramStr.split(';').forEach(p => {
+          const [k, v] = p.split('=');
+          if (k && v) params[k] = v;
+        });
+      }
+      if (key === 'X-WR-CALNAME') {
+        result.calName = unescapeICS(value);
+      } else if (key === 'BEGIN' && value === 'VEVENT') {
+        currentEvent = { uid: '', summary: '', dtstart: null, dtend: null, tzidStart: 'Asia/Tokyo', tzidEnd: 'Asia/Tokyo', location: '', description: '', alarmMinutes: null };
+      } else if (key === 'END' && value === 'VEVENT') {
+        if (currentEvent) result.events.push(currentEvent);
+        currentEvent = null;
+      } else if (key === 'BEGIN' && value === 'VALARM') {
+        inAlarm = true;
+        currentAlarm = { trigger: null };
+      } else if (key === 'END' && value === 'VALARM') {
+        if (inAlarm && currentEvent && currentAlarm && currentAlarm.trigger !== null) {
+          currentEvent.alarmMinutes = currentAlarm.trigger;
+        }
+        inAlarm = false;
+        currentAlarm = null;
+      } else if (currentEvent && !inAlarm) {
+        if (key === 'UID') currentEvent.uid = value;
+        else if (key === 'SUMMARY') currentEvent.summary = unescapeICS(value);
+        else if (key === 'LOCATION') currentEvent.location = unescapeICS(value);
+        else if (key === 'DESCRIPTION') currentEvent.description = unescapeICS(value);
+        else if (key === 'DTSTART') {
+          if (params.TZID) currentEvent.tzidStart = params.TZID;
+          currentEvent.dtstart = parseICSDate(value);
+        } else if (key === 'DTEND') {
+          if (params.TZID) currentEvent.tzidEnd = params.TZID;
+          else currentEvent.tzidEnd = currentEvent.tzidStart;
+          currentEvent.dtend = parseICSDate(value);
+        }
+      } else if (inAlarm && key === 'TRIGGER') {
+        const m = value.match(/-PT(\d+)M/);
+        if (m) currentAlarm.trigger = parseInt(m[1], 10);
+        else {
+          const h = value.match(/-PT(\d+)H/);
+          if (h) currentAlarm.trigger = parseInt(h[1], 10) * 60;
+        }
+      }
+    }
+    return result;
+  }
+
+  function parseICSDate(str) {
+    const m = str.match(/(\d{4})(\d{2})(\d{2})T?(\d{2})?(\d{2})?(\d{2})?/);
+    if (!m) return null;
+    return { year: m[1], month: m[2], day: m[3], hour: m[4] || '00', minute: m[5] || '00', second: m[6] || '00' };
+  }
+
+  function unescapeICS(str) {
+    return str.replace(/\\n/g, '\n').replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\\\/g, '\\');
+  }
+
+  function escapeICS(str) {
+    return (str || '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
+  }
+
+  // VTIMEZONEブロック未登録のゾーン用、固定オフセットの簡易ブロックを生成
+  // DSTは考慮しない(TZ_LISTで定義された定常オフセットのみ)
+  function buildSimpleTzBlock(tzid) {
+    const item = TZ_LIST.find(t => t.id === tzid);
+    if (!item) return TZ_BLOCKS['UTC'];
+    const off = item.offset;
+    const sign = off >= 0 ? '+' : '-';
+    const abs = Math.abs(off);
+    const h = Math.floor(abs);
+    const m = Math.round((abs - h) * 60);
+    const offStr = sign + String(h).padStart(2, '0') + String(m).padStart(2, '0');
+    const tzname = tzid.split('/').pop().replace(/_/g, ' ');
+    return [
+      'BEGIN:VTIMEZONE',
+      'TZID:' + tzid,
+      'BEGIN:STANDARD',
+      'DTSTART:19700101T000000',
+      'TZOFFSETFROM:' + offStr,
+      'TZOFFSETTO:' + offStr,
+      'TZNAME:' + tzname,
+      'END:STANDARD',
+      'END:VTIMEZONE'
+    ].join('\n');
+  }
+
+  // === Generator ===
+  function generateICS() {
+    const now = new Date();
+    const dtstamp = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const usedTZs = new Set();
+    state.events.forEach(e => {
+      usedTZs.add(e.tzidStart);
+      usedTZs.add(e.tzidEnd);
+    });
+    const tzSection = [...usedTZs].map(tz => TZ_BLOCKS[tz] || buildSimpleTzBlock(tz)).join('\n');
+    const eventBlocks = state.events.map((e, idx) => {
+      const uid = e.uid || (Date.now() + '-' + idx + '@ics-editor');
+      const startStr = formatDateForICS(e.dtstart);
+      const endStr = formatDateForICS(e.dtend);
+      let block = 'BEGIN:VEVENT\nUID:' + uid + '\nDTSTAMP:' + dtstamp +
+        '\nDTSTART;TZID=' + e.tzidStart + ':' + startStr +
+        '\nDTEND;TZID=' + e.tzidEnd + ':' + endStr +
+        '\nSUMMARY:' + escapeICS(e.summary);
+      if (e.location) block += '\nLOCATION:' + escapeICS(e.location);
+      if (e.description) block += '\nDESCRIPTION:' + escapeICS(e.description);
+      if (e.alarmMinutes !== null && e.alarmMinutes !== undefined && e.alarmMinutes !== '') {
+        block += '\nBEGIN:VALARM\nACTION:DISPLAY\nDESCRIPTION:' + escapeICS(e.summary) +
+          '\nTRIGGER:-PT' + e.alarmMinutes + 'M\nEND:VALARM';
+      }
+      block += '\nEND:VEVENT';
+      return block;
+    }).join('\n');
+    const lfText = 'BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//ICS Editor//Calendar//JA\nCALSCALE:GREGORIAN\nMETHOD:PUBLISH\nX-WR-CALNAME:' + escapeICS(state.calName) + '\nX-WR-TIMEZONE:Asia/Tokyo\n' + tzSection + '\n' + eventBlocks + '\nEND:VCALENDAR\n';
+    // RFC 5545準拠: 全行をCRLFに統一(LFのみだとApple Calendar等で読み込まれない)
+    return lfText.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
+  }
+
+  function formatDateForICS(d) {
+    if (!d) return '';
+    return d.year + d.month + d.day + 'T' + d.hour + d.minute + d.second;
+  }
+
+  function dateObjToInputValue(d) {
+    if (!d) return '';
+    return d.year + '-' + d.month + '-' + d.day + 'T' + d.hour + ':' + d.minute;
+  }
+
+  function inputValueToDateObj(v) {
+    if (!v) return null;
+    const m = v.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+    if (!m) return null;
+    return { year: m[1], month: m[2], day: m[3], hour: m[4], minute: m[5], second: '00' };
+  }
+
+  function dateObjToUtcMs(d, tzid) {
+    if (!d) return 0;
+    // ローカル時刻として一旦UTC扱いで構築
+    const naiveUtc = Date.UTC(
+      parseInt(d.year), parseInt(d.month) - 1, parseInt(d.day),
+      parseInt(d.hour), parseInt(d.minute), parseInt(d.second)
+    );
+    // 第1ステップ:naiveUtcの瞬間でのTZオフセットを取得
+    let offsetMin = getTimezoneOffsetMinutes(naiveUtc, tzid);
+    // 第1の推定UTC
+    let utcMs = naiveUtc - offsetMin * 60 * 1000;
+    // 第2ステップ:推定UTC時点のオフセットで再計算(DST切替境界対応)
+    const offsetMin2 = getTimezoneOffsetMinutes(utcMs, tzid);
+    if (offsetMin2 !== offsetMin) {
+      utcMs = naiveUtc - offsetMin2 * 60 * 1000;
+    }
+    return utcMs;
+  }
+
+  // 指定UTC時刻における、指定IANAタイムゾーンのオフセット(分)を返す
+  // 夏時間(DST)切替も Intl.DateTimeFormat で自動的に考慮される
+  // 例: America/Los_Angeles で2026/5/9 → -420(PDT、-7時間)
+  //     America/Los_Angeles で2026/12/9 → -480(PST、-8時間)
+  const tzOffsetCache = new Map();
+  function getTimezoneOffsetMinutes(utcMs, tzid) {
+    // キャッシュキー(分単位で丸めて)
+    const cacheKey = tzid + '@' + Math.floor(utcMs / 60000);
+    if (tzOffsetCache.has(cacheKey)) return tzOffsetCache.get(cacheKey);
+
+    let offset;
+    try {
+      // tzid の現地時刻を取得
+      const dtf = new Intl.DateTimeFormat('en-US', {
+        timeZone: tzid,
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: false
+      });
+      const parts = dtf.formatToParts(new Date(utcMs));
+      const map = {};
+      parts.forEach(p => { if (p.type !== 'literal') map[p.type] = p.value; });
+      // 24時間表記の "24" は "00" に正規化(en-USの仕様)
+      const hour = map.hour === '24' ? '00' : map.hour;
+      const localUtcMs = Date.UTC(
+        parseInt(map.year), parseInt(map.month) - 1, parseInt(map.day),
+        parseInt(hour), parseInt(map.minute), parseInt(map.second)
+      );
+      // 現地時刻 - UTC = オフセット
+      offset = Math.round((localUtcMs - utcMs) / 60000);
+    } catch (e) {
+      // tzid不正時はフォールバック表を使う
+      const tz = TZ_LIST.find(t => t.id === tzid);
+      offset = tz ? tz.offset * 60 : 0;
+    }
+    tzOffsetCache.set(cacheKey, offset);
+    return offset;
+  }
+
+  // 指定UTC時刻における、指定TZでの現地のY/M/D/h/m を返す
+  // 週カレンダーで「表示TZ基準」のセル配置を行う際に使用
+  function utcMsToLocalDateObj(utcMs, tzid) {
+    const offsetMin = getTimezoneOffsetMinutes(utcMs, tzid);
+    const localMs = utcMs + offsetMin * 60000;
+    const d = new Date(localMs);
+    return {
+      year: d.getUTCFullYear(),
+      month: d.getUTCMonth() + 1,
+      day: d.getUTCDate(),
+      hour: d.getUTCHours(),
+      minute: d.getUTCMinutes()
+    };
+  }
+
+  function calcDuration(startDate, startTz, endDate, endTz) {
+    const startMs = dateObjToUtcMs(startDate, startTz);
+    const endMs = dateObjToUtcMs(endDate, endTz);
+    const diffMin = Math.round((endMs - startMs) / 60000);
+    if (diffMin < 0) return null;
+    const h = Math.floor(diffMin / 60);
+    const m = diffMin % 60;
+    return { hours: h, minutes: m, totalMinutes: diffMin };
+  }
+
+  function formatDateDisplay(d, tzid) {
+    if (!d) return '-';
+    const utcMs = dateObjToUtcMs(d, tzid);
+    const tz = getTzShortDynamic(tzid, utcMs);
+    return d.month + '/' + d.day + ' ' + d.hour + ':' + d.minute + ' ' + tz;
+  }
+
+  // === Render ===
+  function render() {
+    const empty = document.getElementById('empty-state');
+    const controls = document.getElementById('editor-controls');
+    const views = document.getElementById('editor-views');
+    const cnt = document.getElementById('event-count');
+    const tzInfo = document.getElementById('tz-info');
+    const calNameInput = document.getElementById('cal-name');
+
+    // 全ビューで横幅を統一(常にワイド)
+    document.querySelector('.app').classList.add('wide');
+
+    if (state.events.length === 0 && !state.loaded) {
+      empty.style.display = 'block';
+      controls.style.display = 'none';
+      views.style.display = 'none';
+      return;
+    }
+    empty.style.display = 'none';
+    controls.style.display = 'block';
+    views.style.display = 'block';
+
+    calNameInput.value = state.calName;
+    cnt.textContent = state.events.length;
+
+    const usedTZs = new Set();
+    state.events.forEach(e => { usedTZs.add(e.tzidStart); usedTZs.add(e.tzidEnd); });
+    tzInfo.textContent = 'タイムゾーン: ' + ([...usedTZs].join(', ') || '-');
+
+    // ビュー切替表示
+    document.getElementById('day-grouped-list').style.display = currentView === 'day' ? 'block' : 'none';
+    document.getElementById('week-calendar-list').style.display = currentView === 'week' ? 'block' : 'none';
+    document.getElementById('table-view-list').style.display = currentView === 'table' ? 'block' : 'none';
+
+    document.querySelectorAll('.view-toggle button').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.view === currentView);
+    });
+
+    if (currentView === 'day') renderDayView();
+    else if (currentView === 'week') renderWeekView();
+    else if (currentView === 'table') renderTableView();
+
+    saveState();
+  }
+
+  // 日付別ビュー
+  function renderDayView() {
+    const container = document.getElementById('day-grouped-list');
+    container.innerHTML = '';
+
+    // 日付ごとに事象をまとめる(イベントの開始日のローカル日付でグループ化)
+    const groups = new Map();
+    state.events.forEach((e, idx) => {
+      if (!e.dtstart) return;
+      const key = e.dtstart.year + '-' + e.dtstart.month + '-' + e.dtstart.day;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push({ e, idx });
+    });
+
+    // 日付昇順
+    const sortedKeys = [...groups.keys()].sort();
+
+    if (sortedKeys.length === 0) {
+      container.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--color-text-secondary); font-size: 13px;">イベントがありません</div>';
+      return;
+    }
+
+    const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
+
+    sortedKeys.forEach(key => {
+      const events = groups.get(key);
+      events.sort((a, b) => dateObjToUtcMs(a.e.dtstart, a.e.tzidStart) - dateObjToUtcMs(b.e.dtstart, b.e.tzidStart));
+
+      const [y, m, d] = key.split('-');
+      const dateObj = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+      const weekday = WEEKDAYS[dateObj.getDay()];
+      const isCollapsed = collapsedDays.has(key);
+
+      const group = document.createElement('div');
+      group.className = 'day-group' + (isCollapsed ? ' collapsed' : '');
+
+      const header = document.createElement('div');
+      header.className = 'day-header';
+      header.onclick = () => {
+        if (collapsedDays.has(key)) collapsedDays.delete(key);
+        else collapsedDays.add(key);
+        render();
+      };
+
+      const dateLabel = document.createElement('div');
+      dateLabel.className = 'day-header-date';
+      dateLabel.textContent = parseInt(m) + '/' + parseInt(d);
+
+      const wdLabel = document.createElement('div');
+      wdLabel.className = 'day-header-weekday';
+      wdLabel.textContent = '(' + weekday + ')';
+      if (weekday === '日') wdLabel.style.color = 'var(--color-text-danger)';
+      else if (weekday === '土') wdLabel.style.color = 'var(--color-text-info)';
+
+      const countLabel = document.createElement('div');
+      countLabel.className = 'day-header-count';
+      countLabel.textContent = events.length + ' 件';
+
+      const toggle = document.createElement('div');
+      toggle.className = 'day-header-toggle';
+      toggle.textContent = '▼';
+
+      header.appendChild(dateLabel);
+      header.appendChild(wdLabel);
+      header.appendChild(countLabel);
+      header.appendChild(toggle);
+
+      const eventsWrap = document.createElement('div');
+      eventsWrap.className = 'day-events';
+
+      events.forEach(({ e, idx }) => {
+        const isCrossTz = e.tzidStart !== e.tzidEnd;
+        const row = document.createElement('div');
+        row.className = 'day-event-row' + (isCrossTz ? ' cross-tz' : '');
+        row.onclick = () => openEditModal(idx);
+
+        const time = document.createElement('div');
+        time.className = 'day-event-time';
+        if (isCrossTz) {
+          const endUtc = dateObjToUtcMs(e.dtend, e.tzidEnd);
+          time.innerHTML = e.dtstart.hour + ':' + e.dtstart.minute + ' <span style="color: var(--color-text-tertiary);">→ ' + getTzShortDynamic(e.tzidEnd, endUtc) + ' ' + e.dtend.hour + ':' + e.dtend.minute + '</span>';
+        } else {
+          time.textContent = e.dtstart.hour + ':' + e.dtstart.minute + ' – ' + e.dtend.hour + ':' + e.dtend.minute;
+        }
+
+        const content = document.createElement('div');
+        content.className = 'day-event-content';
+        const titleLine = document.createElement('div');
+        titleLine.className = 'day-event-title-line';
+        titleLine.textContent = e.summary || '(無題)';
+        content.appendChild(titleLine);
+
+        const metaParts = [];
+        if (e.location) metaParts.push('📍 ' + e.location);
+        if (e.alarmMinutes !== null && e.alarmMinutes !== undefined) metaParts.push('🔔 ' + e.alarmMinutes + '分前');
+        if (metaParts.length > 0) {
+          const meta = document.createElement('div');
+          meta.className = 'day-event-meta';
+          meta.textContent = metaParts.join(' ・ ');
+          content.appendChild(meta);
+        }
+
+        row.appendChild(time);
+        row.appendChild(content);
+        eventsWrap.appendChild(row);
+      });
+
+      group.appendChild(header);
+      group.appendChild(eventsWrap);
+      container.appendChild(group);
+    });
+  }
+
+  // 週カレンダービュー
+  // 週カレンダー(時刻軸レイアウト + 表示TZ選択)
+  function renderWeekView() {
+    const container = document.getElementById('week-calendar-list');
+    container.innerHTML = '';
+
+    if (state.events.length === 0) {
+      container.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--color-text-secondary); font-size: 13px;">イベントがありません</div>';
+      return;
+    }
+
+    const tz = weekDisplayTz;
+
+    // 各イベントを表示TZに変換
+    const items = state.events
+      .map((e, idx) => {
+        if (!e.dtstart || !e.dtend) return null;
+        const startUtc = dateObjToUtcMs(e.dtstart, e.tzidStart);
+        const endUtc = dateObjToUtcMs(e.dtend, e.tzidEnd);
+        const ds = utcMsToLocalDateObj(startUtc, tz);
+        const de = utcMsToLocalDateObj(endUtc, tz);
+        return { e, idx, ds, de };
+      })
+      .filter(x => x);
+
+    if (items.length === 0) {
+      container.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--color-text-secondary); font-size: 13px;">表示可能な日時のイベントがありません</div>';
+      return;
+    }
+
+    // 表示TZでの日付集計
+    const byDate = new Map();
+    items.forEach(it => {
+      const k = it.ds.year + '-' + String(it.ds.month).padStart(2, '0') + '-' + String(it.ds.day).padStart(2, '0');
+      if (!byDate.has(k)) byDate.set(k, []);
+      byDate.get(k).push(it);
+    });
+
+    // 表示TZ基準で日付範囲を求めて、表示する週を決定
+    const allDates = items.map(it => new Date(it.ds.year, it.ds.month - 1, it.ds.day));
+    const minDate = new Date(Math.min(...allDates));
+    const maxDate = new Date(Math.max(...allDates));
+
+    function getMonday(d) {
+      const day = d.getDay();
+      const diff = day === 0 ? -6 : 1 - day;
+      const monday = new Date(d);
+      monday.setDate(d.getDate() + diff);
+      monday.setHours(0, 0, 0, 0);
+      return monday;
+    }
+
+    const firstMonday = getMonday(minDate);
+    const lastMonday = getMonday(maxDate);
+    const totalWeeks = Math.round((lastMonday - firstMonday) / (7 * 24 * 3600 * 1000)) + 1;
+
+    if (weekOffset < 0) weekOffset = 0;
+    if (weekOffset > totalWeeks - 1) weekOffset = totalWeeks - 1;
+
+    const displayMonday = new Date(firstMonday);
+    displayMonday.setDate(firstMonday.getDate() + weekOffset * 7);
+
+    // === 上部コントロール: 表示TZ選択 + 週ナビ ===
+    const controlsRow = document.createElement('div');
+    controlsRow.className = 'week-controls';
+
+    // 週ナビ
+    const nav = document.createElement('div');
+    nav.className = 'week-nav';
+    const navTitle = document.createElement('div');
+    navTitle.className = 'week-nav-title';
+    const sunday = new Date(displayMonday);
+    sunday.setDate(displayMonday.getDate() + 6);
+    navTitle.textContent = `${displayMonday.getFullYear()}年 ${displayMonday.getMonth() + 1}月${displayMonday.getDate()}日 〜 ${sunday.getMonth() + 1}月${sunday.getDate()}日 (週 ${weekOffset + 1}/${totalWeeks})`;
+    const prevBtn = document.createElement('button');
+    prevBtn.textContent = '← 前週';
+    prevBtn.disabled = weekOffset === 0;
+    if (prevBtn.disabled) prevBtn.style.opacity = '0.4';
+    prevBtn.onclick = () => { weekOffset--; render(); };
+    const nextBtn = document.createElement('button');
+    nextBtn.textContent = '次週 →';
+    nextBtn.disabled = weekOffset >= totalWeeks - 1;
+    if (nextBtn.disabled) nextBtn.style.opacity = '0.4';
+    nextBtn.onclick = () => { weekOffset++; render(); };
+    nav.appendChild(prevBtn);
+    nav.appendChild(navTitle);
+    nav.appendChild(nextBtn);
+
+    // 表示TZ選択 + 「使用中のみ」チェックボックス
+    const tzWrap = document.createElement('div');
+    tzWrap.className = 'week-tz-row';
+    const tzLabelEl = document.createElement('span');
+    tzLabelEl.className = 'week-tz-label';
+    tzLabelEl.textContent = '表示TZ';
+    const tzSelect = document.createElement('select');
+    tzSelect.innerHTML = buildTZOptionsHTML(tz, { usedOnly: weekTzUsedOnly });
+    tzSelect.value = tz;
+    tzSelect.onchange = () => {
+      weekDisplayTz = tzSelect.value;
+      saveState();
+      render();
+    };
+
+    const usedToggle = document.createElement('label');
+    usedToggle.className = 'week-tz-used-toggle';
+    usedToggle.title = 'チェックするとイベント内で使用されているタイムゾーンのみに絞り込みます';
+    const usedCb = document.createElement('input');
+    usedCb.type = 'checkbox';
+    usedCb.checked = weekTzUsedOnly;
+    usedCb.onchange = () => {
+      weekTzUsedOnly = usedCb.checked;
+      saveState();
+      render();
+    };
+    const usedTxt = document.createElement('span');
+    usedTxt.textContent = '使用中のみ';
+    usedToggle.appendChild(usedCb);
+    usedToggle.appendChild(usedTxt);
+
+    tzWrap.appendChild(tzLabelEl);
+    tzWrap.appendChild(tzSelect);
+    tzWrap.appendChild(usedToggle);
+
+    controlsRow.appendChild(nav);
+    controlsRow.appendChild(tzWrap);
+    container.appendChild(controlsRow);
+
+    // === 表示時刻範囲は常に 0:00 〜 24:00 固定 ===
+    // (TZ切替で位置が動かず、視覚的に一貫したスケールを維持)
+    const minH = 0;
+    const maxH = 24;
+
+    const isWide = document.querySelector('.app').classList.contains('wide');
+    const hourHeight = isWide ? 40 : 32;
+    const bodyHeight = (maxH - minH) * hourHeight;
+
+    // === グリッド構築 ===
+    const grid = document.createElement('div');
+    grid.className = 'week-grid';
+
+    // 時刻軸列
+    const timeCol = document.createElement('div');
+    timeCol.className = 'week-time-col';
+    const timeSpacer = document.createElement('div');
+    timeSpacer.className = 'week-time-spacer';
+    timeCol.appendChild(timeSpacer);
+    const timeAxis = document.createElement('div');
+    timeAxis.className = 'week-time-axis';
+    timeAxis.style.height = bodyHeight + 'px';
+    for (let h = minH; h <= maxH; h++) {
+      const label = document.createElement('div');
+      label.className = 'week-time-label';
+      label.style.top = ((h - minH) * hourHeight) + 'px';
+      label.textContent = String(h).padStart(2, '0') + ':00';
+      timeAxis.appendChild(label);
+    }
+    timeCol.appendChild(timeAxis);
+    grid.appendChild(timeCol);
+
+    // 7日カラム
+    const WEEKDAYS = ['月', '火', '水', '木', '金', '土', '日'];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (let i = 0; i < 7; i++) {
+      const cellDate = new Date(displayMonday);
+      cellDate.setDate(displayMonday.getDate() + i);
+      const cellKey = cellDate.getFullYear() + '-' + String(cellDate.getMonth() + 1).padStart(2, '0') + '-' + String(cellDate.getDate()).padStart(2, '0');
+      const isToday = cellDate.getTime() === today.getTime();
+
+      const col = document.createElement('div');
+      col.className = 'week-day-col' + (isToday ? ' today' : '');
+
+      const header = document.createElement('div');
+      header.className = 'week-day-header';
+      const wdSpan = document.createElement('span');
+      wdSpan.textContent = WEEKDAYS[i];
+      const numSpan = document.createElement('span');
+      numSpan.className = 'week-day-num';
+      if (i === 6) numSpan.classList.add('weekend-sun');
+      else if (i === 5) numSpan.classList.add('weekend-sat');
+      numSpan.textContent = (cellDate.getMonth() + 1) + '/' + cellDate.getDate();
+      header.appendChild(wdSpan);
+      header.appendChild(numSpan);
+
+      const body = document.createElement('div');
+      body.className = 'week-day-body';
+      body.style.height = bodyHeight + 'px';
+      body.style.setProperty('--hour-height', hourHeight + 'px');
+
+      // 当日のイベントを時刻位置に絶対配置
+      const dayItems = (byDate.get(cellKey) || []).slice().sort((a, b) =>
+        (a.ds.hour * 60 + a.ds.minute) - (b.ds.hour * 60 + b.ds.minute)
+      );
+      dayItems.forEach(item => {
+        const evEl = createTimeAxisEventEl(item, minH, hourHeight, bodyHeight);
+        body.appendChild(evEl);
+      });
+
+      col.appendChild(header);
+      col.appendChild(body);
+      grid.appendChild(col);
+    }
+
+    container.appendChild(grid);
+  }
+
+  // 時刻軸週カレンダー用イベント要素を生成
+  function createTimeAxisEventEl(item, minH, hourHeight, bodyHeight) {
+    const { e, idx, ds, de } = item;
+    const isCrossTz = e.tzidStart !== e.tzidEnd;
+    const startH = ds.hour + ds.minute / 60;
+    const sameDay = (ds.year === de.year && ds.month === de.month && ds.day === de.day);
+    const endH = sameDay ? (de.hour + de.minute / 60) : 24;
+    const top = Math.max(0, (startH - minH) * hourHeight);
+    const rawHeight = (endH - startH) * hourHeight;
+    const maxAvail = bodyHeight - top;
+    const height = Math.max(22, Math.min(rawHeight, maxAvail));
+
+    const evEl = document.createElement('div');
+    evEl.className = 'week-event' + (isCrossTz ? ' cross-tz' : '');
+    evEl.style.top = top + 'px';
+    evEl.style.height = height + 'px';
+
+    const sH = String(ds.hour).padStart(2, '0') + ':' + String(ds.minute).padStart(2, '0');
+    const eH = String(de.hour).padStart(2, '0') + ':' + String(de.minute).padStart(2, '0');
+    const overnight = sameDay ? '' : ' →翌日';
+    evEl.title = (e.summary || '(無題)') + '\n' + sH + ' – ' + eH + overnight + (e.location ? '\n' + e.location : '');
+
+    const timeEl = document.createElement('div');
+    timeEl.className = 'week-event-time';
+    timeEl.textContent = sH + ' – ' + eH + overnight;
+
+    const titleEl = document.createElement('div');
+    titleEl.className = 'week-event-title';
+    titleEl.textContent = e.summary || '(無題)';
+
+    evEl.appendChild(timeEl);
+    evEl.appendChild(titleEl);
+    evEl.onclick = () => openEditModal(idx);
+    return evEl;
+  }
+
+  // テーブル(Excel風)ビュー
+  function renderTableView() {
+    const container = document.getElementById('table-view-list');
+    container.innerHTML = '';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'table-wrap';
+
+    const table = document.createElement('table');
+    table.className = 'event-table';
+
+    // 列幅を固定して、横スクロールを発生させない
+    const colgroup = document.createElement('colgroup');
+    colgroup.innerHTML =
+      '<col style="width: 40px;">' +     // #
+      '<col>' +                            // タイトル(伸縮)
+      '<col style="width: 175px;">' +      // 開始日時
+      '<col style="width: 140px;">' +      // 開始TZ
+      '<col style="width: 175px;">' +      // 終了日時
+      '<col style="width: 140px;">' +      // 終了TZ
+      '<col>' +                            // 場所(伸縮)
+      '<col style="width: 70px;">' +       // 分前
+      '<col style="width: 64px;">' +       // 詳細
+      '<col style="width: 44px;">';        // 削除
+    table.appendChild(colgroup);
+
+    const thead = document.createElement('thead');
+    thead.innerHTML =
+      '<tr>' +
+      '<th class="row-num">#</th>' +
+      '<th class="col-title">タイトル</th>' +
+      '<th class="col-dt">開始日時</th>' +
+      '<th class="col-tz">開始TZ</th>' +
+      '<th class="col-dt">終了日時</th>' +
+      '<th class="col-tz">終了TZ</th>' +
+      '<th class="col-loc">場所</th>' +
+      '<th class="col-alarm">分前</th>' +
+      '<th class="col-detail"></th>' +
+      '<th class="col-actions"></th>' +
+      '</tr>';
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+
+    if (state.events.length === 0) {
+      const emptyTr = document.createElement('tr');
+      emptyTr.innerHTML = '<td colspan="10" style="text-align: center; padding: 1.5rem; color: var(--color-text-secondary); font-size: 13px;">イベントがありません。「+ 行を追加」または「+ イベント追加」から作成してください。</td>';
+      tbody.appendChild(emptyTr);
+    } else {
+      state.events.forEach((e, idx) => {
+        const isCrossTz = e.tzidStart !== e.tzidEnd;
+        const tr = document.createElement('tr');
+        tr.className = 'event-row' + (isCrossTz ? ' cross-tz' : '');
+        tr.dataset.idx = String(idx);
+
+        const startVal = dateObjToInputValue(e.dtstart);
+        const endVal = dateObjToInputValue(e.dtend);
+        const alarmVal = (e.alarmMinutes !== null && e.alarmMinutes !== undefined) ? e.alarmMinutes : '';
+        // 既存イベントのTZが非表示でも選択肢に残るよう、currentValueを各行のTZに合わせる
+        const startTzOptions = buildTZOptionsHTML(e.tzidStart);
+        const endTzOptions = buildTZOptionsHTML(e.tzidEnd);
+
+        tr.innerHTML =
+          '<td class="row-num">' + (idx + 1) + '</td>' +
+          '<td class="col-title"><input type="text" data-field="summary"></td>' +
+          '<td class="col-dt"><input type="datetime-local" data-field="dtstart"></td>' +
+          '<td class="col-tz"><select data-field="tzidStart">' + startTzOptions + '</select></td>' +
+          '<td class="col-dt"><input type="datetime-local" data-field="dtend"></td>' +
+          '<td class="col-tz"><select data-field="tzidEnd">' + endTzOptions + '</select></td>' +
+          '<td class="col-loc"><input type="text" data-field="location"></td>' +
+          '<td class="col-alarm"><input type="number" data-field="alarmMinutes" min="0" placeholder="-"></td>' +
+          '<td class="col-detail"><button data-action="open-modal">詳細</button></td>' +
+          '<td class="col-actions"><button data-action="delete" class="btn-danger">×</button></td>';
+
+        // 値の設定(innerHTML経由ではなくpropertyで設定し、特殊文字エスケープを回避)
+        tr.querySelector('input[data-field="summary"]').value = e.summary || '';
+        tr.querySelector('input[data-field="dtstart"]').value = startVal;
+        tr.querySelector('select[data-field="tzidStart"]').value = e.tzidStart || 'Asia/Tokyo';
+        tr.querySelector('input[data-field="dtend"]').value = endVal;
+        tr.querySelector('select[data-field="tzidEnd"]').value = e.tzidEnd || 'Asia/Tokyo';
+        tr.querySelector('input[data-field="location"]').value = e.location || '';
+        tr.querySelector('input[data-field="alarmMinutes"]').value = alarmVal;
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    container.appendChild(wrap);
+
+    const toolbar = document.createElement('div');
+    toolbar.className = 'table-toolbar';
+    toolbar.innerHTML =
+      '<button id="table-add-btn">+ 行を追加</button>' +
+      '<span class="table-hint">セルを直接編集できます。説明文や複数行入力は「詳細」ボタンから。</span>';
+    container.appendChild(toolbar);
+
+    // 行追加
+    toolbar.querySelector('#table-add-btn').addEventListener('click', () => {
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      const today = {
+        year: String(now.getFullYear()),
+        month: pad(now.getMonth() + 1),
+        day: pad(now.getDate()),
+        hour: '09',
+        minute: '00',
+        second: '00'
+      };
+      const endToday = Object.assign({}, today, { hour: '10' });
+      state.events.push({
+        uid: '',
+        summary: '',
+        dtstart: today,
+        dtend: endToday,
+        tzidStart: 'Asia/Tokyo',
+        tzidEnd: 'Asia/Tokyo',
+        location: '',
+        description: '',
+        alarmMinutes: null
+      });
+      render();
+      // 新規行のタイトル欄にフォーカス
+      const rows = document.querySelectorAll('#table-view-list tbody tr.event-row');
+      const last = rows[rows.length - 1];
+      if (last) {
+        const input = last.querySelector('input[data-field="summary"]');
+        if (input) input.focus();
+      }
+    });
+
+    // インライン編集 (change で確定保存)
+    tbody.addEventListener('change', (ev) => {
+      const tr = ev.target.closest('tr.event-row');
+      if (!tr) return;
+      const idx = parseInt(tr.dataset.idx, 10);
+      const evt = state.events[idx];
+      if (!evt) return;
+      const field = ev.target.dataset.field;
+      if (!field) return;
+
+      if (field === 'dtstart' || field === 'dtend') {
+        evt[field] = inputValueToDateObj(ev.target.value);
+      } else if (field === 'alarmMinutes') {
+        const v = ev.target.value.trim();
+        evt.alarmMinutes = v === '' ? null : parseInt(v, 10);
+      } else {
+        evt[field] = ev.target.value;
+      }
+
+      if (field === 'tzidStart' || field === 'tzidEnd') {
+        tr.classList.toggle('cross-tz', evt.tzidStart !== evt.tzidEnd);
+      }
+      saveState();
+    });
+
+    // 操作ボタン
+    tbody.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('button[data-action]');
+      if (!btn) return;
+      const tr = btn.closest('tr.event-row');
+      if (!tr) return;
+      const idx = parseInt(tr.dataset.idx, 10);
+      const action = btn.dataset.action;
+      if (action === 'delete') {
+        if (!confirm('このイベントを削除しますか?')) return;
+        state.events.splice(idx, 1);
+        render();
+        showToast('イベントを削除しました');
+      } else if (action === 'open-modal') {
+        openEditModal(idx);
+      }
+    });
+  }
+
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.style.display = 'block';
+    setTimeout(() => { toast.style.display = 'none'; }, 2500);
+  }
+
+  function updateDurationDisplay() {
+    const startVal = document.getElementById('m-start').value;
+    const endVal = document.getElementById('m-end').value;
+    const isCross = document.getElementById('m-cross-tz').checked;
+    const tzStart = isCross ? document.getElementById('m-tz-start').value : document.getElementById('m-tz').value;
+    const tzEnd = isCross ? document.getElementById('m-tz-end').value : document.getElementById('m-tz').value;
+    const startD = inputValueToDateObj(startVal);
+    const endD = inputValueToDateObj(endVal);
+    const info = document.getElementById('duration-info');
+    if (!startD || !endD) { info.style.display = 'none'; return; }
+    const dur = calcDuration(startD, tzStart, endD, tzEnd);
+    info.classList.remove('warn');
+    if (!dur) {
+      info.style.display = 'block';
+      info.textContent = '⚠ 終了が開始より前になっています';
+      info.classList.add('warn');
+      return;
+    }
+    info.style.display = 'block';
+    if (tzStart === tzEnd) {
+      info.textContent = '所要時間: ' + dur.hours + '時間' + (dur.minutes > 0 ? dur.minutes + '分' : '');
+    } else {
+      const startUtc = dateObjToUtcMs(startD, tzStart);
+      const endUtc = dateObjToUtcMs(endD, tzEnd);
+      const tzS = getTzShortDynamic(tzStart, startUtc);
+      const tzE = getTzShortDynamic(tzEnd, endUtc);
+      info.textContent = '所要時間: ' + dur.hours + '時間' + (dur.minutes > 0 ? dur.minutes + '分' : '') + ' (' + tzS + ' → ' + tzE + ')';
+    }
+  }
+
+  function toggleCrossTz() {
+    const checked = document.getElementById('m-cross-tz').checked;
+    document.getElementById('single-tz-row').style.display = checked ? 'none' : 'block';
+    document.getElementById('dual-tz-row').style.display = checked ? 'grid' : 'none';
+    document.querySelectorAll('.start-tz-label').forEach(el => el.textContent = checked ? '(出発地時刻)' : '(現地時刻)');
+    document.querySelectorAll('.end-tz-label').forEach(el => el.textContent = checked ? '(到着地時刻)' : '(現地時刻)');
+    if (checked) {
+      const single = document.getElementById('m-tz').value;
+      if (!document.getElementById('m-tz-start').value) document.getElementById('m-tz-start').value = single;
+      if (!document.getElementById('m-tz-end').value) document.getElementById('m-tz-end').value = single;
+    }
+    updateDurationDisplay();
+  }
+
+  function openEditModal(idx) {
+    editingIndex = idx;
+    const e = idx === null ? {
+      summary: '', dtstart: null, dtend: null, tzidStart: 'Asia/Tokyo', tzidEnd: 'Asia/Tokyo',
+      location: '', description: '', alarmMinutes: null
+    } : state.events[idx];
+
+    const isCross = e.tzidStart !== e.tzidEnd;
+
+    document.getElementById('modal-title').textContent = idx === null ? 'イベントを追加' : 'イベントを編集';
+    document.getElementById('m-summary').value = e.summary || '';
+    document.getElementById('m-start').value = dateObjToInputValue(e.dtstart);
+    document.getElementById('m-end').value = dateObjToInputValue(e.dtend);
+    document.getElementById('m-cross-tz').checked = isCross;
+    // 既存イベントのTZが非表示設定でも選択肢に残るよう、currentValue指定で再生成
+    populateTZSelect(document.getElementById('m-tz'), e.tzidStart);
+    populateTZSelect(document.getElementById('m-tz-start'), e.tzidStart);
+    populateTZSelect(document.getElementById('m-tz-end'), e.tzidEnd);
+    document.getElementById('m-tz').value = e.tzidStart || 'Asia/Tokyo';
+    document.getElementById('m-tz-start').value = e.tzidStart || 'Asia/Tokyo';
+    document.getElementById('m-tz-end').value = e.tzidEnd || 'Asia/Tokyo';
+    document.getElementById('m-location').value = e.location || '';
+    document.getElementById('m-description').value = e.description || '';
+    document.getElementById('m-alarm').value = e.alarmMinutes !== null && e.alarmMinutes !== undefined ? e.alarmMinutes : '';
+    document.getElementById('modal-delete-btn').style.display = idx === null ? 'none' : 'inline-block';
+
+    toggleCrossTz();
+    document.getElementById('event-modal').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('event-modal').classList.remove('open');
+    editingIndex = null;
+  }
+
+  function saveModal() {
+    const summary = document.getElementById('m-summary').value.trim();
+    const start = inputValueToDateObj(document.getElementById('m-start').value);
+    const end = inputValueToDateObj(document.getElementById('m-end').value);
+    const isCross = document.getElementById('m-cross-tz').checked;
+    const tzidStart = isCross ? document.getElementById('m-tz-start').value : document.getElementById('m-tz').value;
+    const tzidEnd = isCross ? document.getElementById('m-tz-end').value : document.getElementById('m-tz').value;
+    const location = document.getElementById('m-location').value.trim();
+    const description = document.getElementById('m-description').value.trim();
+    const alarmStr = document.getElementById('m-alarm').value.trim();
+    const alarmMinutes = alarmStr === '' ? null : parseInt(alarmStr, 10);
+
+    if (!summary) { alert('タイトルを入力してください'); return; }
+    if (!start || !end) { alert('開始日時と終了日時を入力してください'); return; }
+
+    const ev = { uid: '', summary, dtstart: start, dtend: end, tzidStart, tzidEnd, location, description, alarmMinutes };
+
+    if (editingIndex === null) {
+      state.events.push(ev);
+      showToast('イベントを追加しました');
+    } else {
+      ev.uid = state.events[editingIndex].uid;
+      state.events[editingIndex] = ev;
+      showToast('イベントを保存しました');
+    }
+    closeModal();
+    render();
+  }
+
+  function deleteEvent() {
+    if (editingIndex === null) return;
+    if (!confirm('このイベントを削除しますか?')) return;
+    state.events.splice(editingIndex, 1);
+    showToast('イベントを削除しました');
+    closeModal();
+    render();
+  }
+
+  // === TZ表示設定モーダル ===
+  function openTZSettings() {
+    renderTZSettingsList();
+    document.getElementById('tz-settings-modal').classList.add('open');
+  }
+
+  function closeTZSettings() {
+    document.getElementById('tz-settings-modal').classList.remove('open');
+  }
+
+  function renderTZSettingsList() {
+    const list = document.getElementById('tz-settings-list');
+    list.innerHTML = '';
+    const usedTZs = new Set();
+    state.events.forEach(e => { usedTZs.add(e.tzidStart); usedTZs.add(e.tzidEnd); });
+
+    TZ_LIST.forEach(tz => {
+      const isEnabled = !enabledTZs || enabledTZs.has(tz.id);
+      const inUse = usedTZs.has(tz.id);
+      const row = document.createElement('label');
+      row.className = 'tz-settings-row';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.dataset.tzId = tz.id;
+      cb.checked = isEnabled;
+      cb.addEventListener('change', updateTZSettingsCount);
+      const label = document.createElement('span');
+      label.className = 'tz-row-label';
+      label.textContent = tzLabel(tz) + (inUse ? '  ・ 使用中' : '');
+      row.appendChild(cb);
+      row.appendChild(label);
+      list.appendChild(row);
+    });
+    updateTZSettingsCount();
+  }
+
+  function updateTZSettingsCount() {
+    const cbs = document.querySelectorAll('#tz-settings-list input[type="checkbox"]');
+    const checked = [...cbs].filter(c => c.checked).length;
+    document.getElementById('tz-settings-count').textContent = checked + ' / ' + cbs.length + ' 件選択中';
+  }
+
+  function setTZSettingsAll(checked) {
+    document.querySelectorAll('#tz-settings-list input[type="checkbox"]').forEach(cb => {
+      cb.checked = checked;
+    });
+    updateTZSettingsCount();
+  }
+
+  function applyTZSettingsPreset(presetSet) {
+    document.querySelectorAll('#tz-settings-list input[type="checkbox"]').forEach(cb => {
+      cb.checked = presetSet.has(cb.dataset.tzId);
+    });
+    updateTZSettingsCount();
+  }
+
+  function saveTZSettings() {
+    const cbs = document.querySelectorAll('#tz-settings-list input[type="checkbox"]');
+    const enabled = [...cbs].filter(c => c.checked).map(c => c.dataset.tzId);
+    if (enabled.length === 0) {
+      alert('少なくとも1つは選択してください');
+      return;
+    }
+    if (enabled.length === TZ_LIST.length) {
+      enabledTZs = null; // 全て選択は「制限なし」と等価
+    } else {
+      enabledTZs = new Set(enabled);
+    }
+    saveState();
+    closeTZSettings();
+    render();
+    showToast('表示TZ設定を保存しました');
+  }
+
+  // ICSを生成してダウンロード(共通処理)
+  function buildAndDownloadICS() {
+    state.calName = document.getElementById('cal-name').value || 'My Calendar';
+    const ics = generateICS();
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = state.calName.replace(/[^\w\s\-ぁ-んァ-ヶ一-龥]/g, '_') + '.ics';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function downloadICS() {
+    buildAndDownloadICS();
+    showToast('ICSファイルをダウンロードしました');
+  }
+
+  // Googleカレンダーのインポート/エクスポート設定画面を新規タブで開く
+  // ブラウザ単体ではアカウントへの直接書き込み不可のため、
+  // ダウンロードしたファイルをユーザーがImport画面でアップロードする2ステップ運用
+  function openInGoogle() {
+    buildAndDownloadICS();
+    window.open('https://calendar.google.com/calendar/u/0/r/settings/export', '_blank', 'noopener,noreferrer');
+    showToast('.icsをダウンロードしました。Googleカレンダーのタブで「コンピュータからファイルを選択」してください');
+  }
+
+  // Outlookカレンダーの追加画面を新規タブで開く(業務アカウント outlook.office.com)
+  function openInOutlook() {
+    buildAndDownloadICS();
+    window.open('https://outlook.office.com/calendar/addcalendar?deeplink=calendar%2F0%2Faddcalendar', '_blank', 'noopener,noreferrer');
+    showToast('.icsをダウンロードしました。Outlookのタブで「ファイルからアップロード」を選択してください');
+  }
+
+  // === Init ===
+  populateTZSelect(document.getElementById('m-tz'));
+  populateTZSelect(document.getElementById('m-tz-start'));
+  populateTZSelect(document.getElementById('m-tz-end'));
+
+  loadState();
+
+  document.getElementById('file-input').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const result = parseICS(ev.target.result);
+        state = { calName: result.calName, events: result.events, loaded: true };
+        render();
+        showToast(result.events.length + '件のイベントを読み込みました');
+      } catch (err) {
+        alert('ICSファイルの読み込みに失敗しました: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  document.getElementById('new-blank-btn').addEventListener('click', () => {
+    state = { calName: 'My Calendar', loaded: true, events: [] };
+    render();
+  });
+
+  document.getElementById('add-event-btn').addEventListener('click', () => openEditModal(null));
+  document.getElementById('download-btn').addEventListener('click', downloadICS);
+  document.getElementById('open-google-btn').addEventListener('click', openInGoogle);
+  document.getElementById('open-outlook-btn').addEventListener('click', openInOutlook);
+  document.getElementById('tz-settings-btn').addEventListener('click', openTZSettings);
+  document.getElementById('tz-settings-cancel').addEventListener('click', closeTZSettings);
+  document.getElementById('tz-settings-save').addEventListener('click', saveTZSettings);
+  document.getElementById('tz-settings-all').addEventListener('click', () => setTZSettingsAll(true));
+  document.getElementById('tz-settings-none').addEventListener('click', () => setTZSettingsAll(false));
+  document.getElementById('tz-settings-preset-major').addEventListener('click', () => applyTZSettingsPreset(TZ_PRESET_MAJOR));
+  document.getElementById('tz-settings-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'tz-settings-modal') closeTZSettings();
+  });
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    if (!confirm('現在のカレンダーをリセットしますか?(localStorageの保存もクリアされます)')) return;
+    state = { calName: 'My Calendar', loaded: false, events: [] };
+    try { localStorage.removeItem('ics-editor-state'); } catch (e) {}
+    render();
+  });
+  document.getElementById('modal-cancel-btn').addEventListener('click', closeModal);
+  document.getElementById('modal-save-btn').addEventListener('click', saveModal);
+  document.getElementById('modal-delete-btn').addEventListener('click', deleteEvent);
+  document.getElementById('m-cross-tz').addEventListener('change', toggleCrossTz);
+  document.getElementById('m-start').addEventListener('change', updateDurationDisplay);
+  document.getElementById('m-end').addEventListener('change', updateDurationDisplay);
+  document.getElementById('m-tz').addEventListener('change', updateDurationDisplay);
+  document.getElementById('m-tz-start').addEventListener('change', updateDurationDisplay);
+  document.getElementById('m-tz-end').addEventListener('change', updateDurationDisplay);
+  document.getElementById('cal-name').addEventListener('input', (e) => { state.calName = e.target.value; saveState(); });
+
+  // ビュー切替ボタン
+  document.querySelectorAll('.view-toggle button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentView = btn.dataset.view;
+      if (currentView === 'week') weekOffset = 0;
+      render();
+    });
+  });
+
+  // Modal: ESCで閉じる、背景クリックで閉じる
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (document.getElementById('tz-settings-modal').classList.contains('open')) {
+      closeTZSettings();
+    } else if (document.getElementById('event-modal').classList.contains('open')) {
+      closeModal();
+    }
+  });
+  document.getElementById('event-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'event-modal') closeModal();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
