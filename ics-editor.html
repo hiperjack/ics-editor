@@ -1725,6 +1725,20 @@
     const controlsRow = document.createElement('div');
     controlsRow.className = 'week-controls';
 
+    // sticky-top の現在高さを取得し、その直下に sticky 配置
+    // (PC・モバイル共通: スクロールしても週ナビとTZ選択が常に見える)
+    const stickyEl = document.querySelector('.sticky-top');
+    if (stickyEl) {
+      const stickyH = stickyEl.offsetHeight;
+      controlsRow.style.position = 'sticky';
+      controlsRow.style.top = stickyH + 'px';
+      controlsRow.style.zIndex = '5';
+      controlsRow.style.background = 'var(--color-background-tertiary)';
+      controlsRow.style.paddingTop = '6px';
+      controlsRow.style.paddingBottom = '4px';
+      controlsRow.style.marginBottom = '0';
+    }
+
     // 週ナビ
     const nav = document.createElement('div');
     nav.className = 'week-nav';
