@@ -697,7 +697,9 @@
 
   /* Table view */
   .table-wrap {
-    overflow: hidden;
+    /* overflow: clip でクリップしつつスクロールコンテキストは作らない
+       (子のtheadのposition:stickyを document スクロールに対して効かせるため) */
+    overflow: clip;
     background: var(--color-background-primary);
     border: 0.5px solid var(--color-border-tertiary);
     border-radius: var(--border-radius-md);
@@ -2116,6 +2118,16 @@
       '<th class="col-actions"></th>' +
       '</tr>';
     table.appendChild(thead);
+
+    // sticky-top 直下に thead を固定 (スクロールしても列見出しが常に見える)
+    const stickyEl = document.querySelector('.sticky-top');
+    if (stickyEl) {
+      const stickyH = stickyEl.offsetHeight;
+      thead.querySelectorAll('th').forEach(th => {
+        th.style.top = stickyH + 'px';
+        th.style.zIndex = '5';
+      });
+    }
 
     const tbody = document.createElement('tbody');
 
