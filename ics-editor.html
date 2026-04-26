@@ -427,8 +427,8 @@
 
     .week-grid { grid-template-columns: 40px repeat(7, minmax(0, 1fr)); gap: 2px; }
     /* カレンダー単日モード(モバイル): 時刻軸列を読みやすい幅に */
-    /* (.app プレフィックスで、後出の.app.wide .week-grid に確実に勝つ specificity) */
-    .app .week-grid.mobile-single { grid-template-columns: 48px minmax(0, 1fr); gap: 2px; }
+    /* (.app.wide プレフィックスで specificity 4。後出の.app.wide .week-grid (3) に確実に勝つ) */
+    .app.wide .week-grid.mobile-single { grid-template-columns: 48px minmax(0, 1fr); gap: 2px; }
     .week-day-num { font-size: 12px; }
     .week-time-label { font-size: 11px; right: 4px; padding: 2px 5px; }
     .week-event { padding: 4px 6px; border-left-width: 3px; gap: 1px; left: 3px; right: 3px; }
@@ -1466,7 +1466,8 @@
       return;
     }
     empty.style.display = 'none';
-    controls.style.display = 'block';
+    // モバイル+折りたたみ状態では editor-controls を非表示(CSSは inline style に勝てないので JS で制御)
+    controls.style.display = (isMobile() && headerCollapsed) ? 'none' : 'block';
     views.style.display = 'block';
 
     calNameInput.value = state.calName;
