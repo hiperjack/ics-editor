@@ -471,6 +471,17 @@
     .info-bar { font-size: 11px; }
     .view-toggle { width: 100%; justify-content: space-between; }
 
+    /* カレンダービューのナビ行をスティッキー化(ヘッダの直下に常時表示) */
+    .week-controls {
+      position: sticky;
+      top: var(--sticky-top-height, 0);
+      z-index: 5;
+      background: var(--color-background-tertiary);
+      padding-top: 6px;
+      padding-bottom: 4px;
+      margin-bottom: 0;
+    }
+
     /* モバイル時のみヘッダ開閉ボタンを表示 */
     /* (.sticky-top プレフィックスで、後出のbase .header-collapse-btn に勝つ specificity) */
     .sticky-top .header-collapse-btn { display: block; }
@@ -1503,6 +1514,13 @@
     collapseBtn.textContent = headerCollapsed ? '▼ ' + titleForBtn : '▲ ヘッダを閉じる';
     collapseBtn.setAttribute('aria-expanded', headerCollapsed ? 'false' : 'true');
 
+    // 子stickyの top に使うため、現在のsticky-top高さをCSS変数に反映
+    if (isMobile()) {
+      document.documentElement.style.setProperty('--sticky-top-height', stickyTop.offsetHeight + 'px');
+    } else {
+      document.documentElement.style.setProperty('--sticky-top-height', '0px');
+    }
+
     if (state.events.length === 0 && !state.loaded) {
       empty.style.display = 'block';
       controls.style.display = 'none';
@@ -1929,7 +1947,7 @@
     };
 
     const nextBtn = document.createElement('button');
-    nextBtn.textContent = '次日 →';
+    nextBtn.textContent = '翌日 →';
     nextBtn.onclick = () => {
       mobileViewDate.setDate(mobileViewDate.getDate() + 1);
       render();
