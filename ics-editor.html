@@ -471,16 +471,7 @@
     .info-bar { font-size: 11px; }
     .view-toggle { width: 100%; justify-content: space-between; }
 
-    /* カレンダービューのナビ行をスティッキー化(ヘッダの直下に常時表示) */
-    .week-controls {
-      position: sticky;
-      top: var(--sticky-top-height, 0);
-      z-index: 5;
-      background: var(--color-background-tertiary);
-      padding-top: 6px;
-      padding-bottom: 4px;
-      margin-bottom: 0;
-    }
+    /* カレンダービューのナビ行 sticky 化は renderMobileSingleDayWeek 内の inline style で行う */
 
     /* モバイル時のみヘッダ開閉ボタンを表示 */
     /* (.sticky-top プレフィックスで、後出のbase .header-collapse-btn に勝つ specificity) */
@@ -1514,12 +1505,6 @@
     collapseBtn.textContent = headerCollapsed ? '▼ ' + titleForBtn : '▲ ヘッダを閉じる';
     collapseBtn.setAttribute('aria-expanded', headerCollapsed ? 'false' : 'true');
 
-    // 子stickyの top に使うため、現在のsticky-top高さをCSS変数に反映
-    if (isMobile()) {
-      document.documentElement.style.setProperty('--sticky-top-height', stickyTop.offsetHeight + 'px');
-    } else {
-      document.documentElement.style.setProperty('--sticky-top-height', '0px');
-    }
 
     if (state.events.length === 0 && !state.loaded) {
       empty.style.display = 'block';
@@ -1930,6 +1915,19 @@
     // === 上部コントロール: 表示TZ + 日ナビ ===
     const controlsRow = document.createElement('div');
     controlsRow.className = 'week-controls';
+
+    // sticky-top の現在高さを取得し、その直下に sticky 配置(CSS変数経由ではなくinlineで確実に)
+    const stickyEl = document.querySelector('.sticky-top');
+    if (stickyEl) {
+      const stickyH = stickyEl.offsetHeight;
+      controlsRow.style.position = 'sticky';
+      controlsRow.style.top = stickyH + 'px';
+      controlsRow.style.zIndex = '5';
+      controlsRow.style.background = 'var(--color-background-tertiary)';
+      controlsRow.style.paddingTop = '6px';
+      controlsRow.style.paddingBottom = '4px';
+      controlsRow.style.marginBottom = '0';
+    }
 
     // 日ナビ
     const nav = document.createElement('div');
